@@ -13,7 +13,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "worker": "tsx scripts/worker.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
@@ -21,6 +22,7 @@
     "next-auth": "^5.0.0-beta.29",
     "next-intl": "^4.3.4",
     "papaparse": "^5.5.3",
+    "pg-boss": "^12.35.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "zod": "^3.25.76"

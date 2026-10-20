@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const links = [
     { href: "/", label: t("nav.dashboard") },
-    ...(actor.employeeId ? [{ href: "/tasks", label: t("nav.tasks") }, { href: "/requests", label: t("nav.requests") }] : []),
+    ...(actor.employeeId ? [{ href: "/tasks", label: t("nav.tasks") }, { href: "/requests", label: t("nav.requests") }, { href: "/calendar", label: t("nav.calendar") }] : []),
     ...(hasPermission(actor, "directory.view") || hasPermission(actor, "employees.view") ? [{ href: "/employees", label: t("nav.employees") }] : []),
     { href: "/org", label: t("nav.org") },
     ...(scopeOf(actor, "templates.manage") ? [{ href: "/templates", label: t("nav.templates") }] : []),
@@ -23,6 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(scopeOf(actor, "assets.manage") === "all" ? [{ href: "/assets", label: t("nav.assets") }] : []),
     ...(hasPermission(actor, "roles.manage") || hasPermission(actor, "roles.assign") ? [{ href: "/roles", label: t("nav.roles") }] : []),
     ...(hasPermission(actor, "import.run") ? [{ href: "/import", label: t("nav.import") }] : []),
+    ...(scopeOf(actor, "settings.manage") === "all" ? [{ href: "/settings", label: t("nav.settings") }] : []),
     ...(hasPermission(actor, "audit.view") ? [{ href: "/audit", label: t("nav.audit") }] : []),
   ];
 

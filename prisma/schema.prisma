@@ -45,35 +45,42 @@ enum PermissionScope {
 // ───────────── Org structure ─────────────
 
 model Company {
-  id          String       @id @default(uuid()) @db.Uuid
-  name        String       @unique
-  country     String
-  departments Department[]
-  employees   Employee[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  createdById String?      @db.Uuid
-  deletedAt   DateTime?
+  id              String         @id @default(uuid()) @db.Uuid
+  name            String         @unique
+  country         String
+  departments     Department[]
+  employees       Employee[]
+  /// default absence policy for the company (phase 2; the most specific assignment wins)
+  absencePolicyId String?        @db.Uuid
+  absencePolicy   AbsencePolicy? @relation(fields: [absencePolicyId], references: [id])
+  workWeeks       WorkWeek[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  createdById     String?        @db.Uuid
+  deletedAt       DateTime?
 
   @@map("company")
 }
 
 model Department {
-  id           String           @id @default(uuid()) @db.Uuid
-  companyId    String           @db.Uuid
-  company      Company          @relation(fields: [companyId], references: [id])
-  name         String
-  parentId     String?          @db.Uuid
-  parent       Department?      @relation("DepartmentTree", fields: [parentId], references: [id])
-  children     Department[]     @relation("DepartmentTree")
-  heads        DepartmentHead[]
-  employees    Employee[]
-  requestTypes RequestType[]
-  requests     Request[]
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  createdById  String?          @db.Uuid
-  deletedAt    DateTime?
+  id              String           @id @default(uuid()) @db.Uuid
+  companyId       String           @db.Uuid
+  company         Company          @relation(fields: [companyId], references: [id])
+  name            String
+  parentId        String?          @db.Uuid
+  parent          Department?      @relation("DepartmentTree", fields: [parentId], references: [id])
+  children        Department[]     @relation("DepartmentTree")
+  heads           DepartmentHead[]
+  employees       Employee[]
+  requestTypes    RequestType[]
+  requests        Request[]
+  /// absence policy for the department (phase 2); applies to sub-departments unless they set their own
+  absencePolicyId String?          @db.Uuid
+  absencePolicy   AbsencePolicy?   @relation(fields: [absencePolicyId], references: [id])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  createdById     String?          @db.Uuid
+  deletedAt       DateTime?
 
   @@unique([companyId, name])
   @@map("department")
@@ -86,6 +93,7 @@ model Location {
   state       String?
   timezone    String // IANA, e.g. Europe/Kyiv, America/New_York
   employees   Employee[]
+  workWeeks   WorkWeek[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   createdById String?    @db.Uuid
@@ -133,8 +141,11 @@ model Employee {
   birthDate       DateTime?        @db.Date
   showBirthday    Boolean          @default(true)
   status          EmployeeStatus   @default(active)
-  /// FK to AbsencePolicy is added in phase 2, when the table exists
+  /// personal absence policy; overrides department and company (phase 2)
   absencePolicyId String?          @db.Uuid
+  absencePolicy   AbsencePolicy?   @relation(fields: [absencePolicyId], references: [id])
+  balances        AbsenceBalance[]
+  absences        Absence[]
   locale          Locale           @default(uk)
   rates           RateHistory[]
   headOf          DepartmentHead[]
@@ -157,19 +168,21 @@ model Employee {
 }
 
 model User {
-  id          String    @id @default(uuid()) @db.Uuid
+  id            String    @id @default(uuid()) @db.Uuid
   /// Microsoft Entra ID object id (replaces google_sub from the PRD, see CLAUDE.md)
-  entraOid    String?   @unique
-  email       String    @unique
-  roleId      String    @db.Uuid
-  role        Role      @relation(fields: [roleId], references: [id])
-  isActive    Boolean   @default(true)
-  lastLoginAt DateTime?
-  employee    Employee?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  createdById String?   @db.Uuid
-  deletedAt   DateTime?
+  entraOid      String?   @unique
+  email         String    @unique
+  roleId        String    @db.Uuid
+  role          Role      @relation(fields: [roleId], references: [id])
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  /// technical: secret for the personal ICS subscription (phase 2); rotating it invalidates the old link
+  calendarToken String?   @unique
+  employee      Employee?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdById   String?   @db.Uuid
+  deletedAt     DateTime?
 
   @@map("app_user")
 }
@@ -560,6 +573,7 @@ model Request {
   comments             Comment[]
   grants               AccessGrant[]
   documents            Document[]
+  absence              Absence?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
   createdById          String?             @db.Uuid
@@ -622,4 +636,248 @@ model Comment {
 
   @@index([requestId])
   @@map("comment")
+}
+
+// ───────────── Phase 2: calendar layers (PRD 5) ─────────────
+
+enum LayerEffect {
+  non_working
+  informational
+}
+
+enum LayerSource {
+  manual
+  ics_import
+  csv_import
+  system
+}
+
+enum SystemLayerKind {
+  birthdays
+  work_anniversaries
+}
+
+enum LayerVisibility {
+  all
+  assigned_only
+}
+
+enum Recurrence {
+  none
+  yearly
+}
+
+enum LayerTarget {
+  company
+  department
+  location
+  employee
+}
+
+model CalendarLayer {
+  id          String            @id @default(uuid()) @db.Uuid
+  nameUk      String
+  nameEn      String?
+  color       String            @default("#7d7a85")
+  effect      LayerEffect
+  source      LayerSource       @default(manual)
+  /// system layers are generated from Employee data, they have no stored events
+  systemKind  SystemLayerKind?  @unique
+  visibility  LayerVisibility   @default(assigned_only)
+  events      CalendarEvent[]
+  assignments LayerAssignment[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  createdById String?           @db.Uuid
+  deletedAt   DateTime?
+
+  @@map("calendar_layer")
+}
+
+model CalendarEvent {
+  id          String        @id @default(uuid()) @db.Uuid
+  layerId     String        @db.Uuid
+  layer       CalendarLayer @relation(fields: [layerId], references: [id], onDelete: Cascade)
+  titleUk     String
+  titleEn     String?
+  date        DateTime      @db.Date
+  endDate     DateTime?     @db.Date
+  recurrence  Recurrence    @default(none)
+  /// null = inherit the layer's effect; true/false overrides it for this event (PRD 5)
+  nonWorking  Boolean?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  createdById String?       @db.Uuid
+  deletedAt   DateTime?
+
+  @@index([layerId, date])
+  @@map("calendar_event")
+}
+
+model LayerAssignment {
+  layerId    String        @db.Uuid
+  layer      CalendarLayer @relation(fields: [layerId], references: [id], onDelete: Cascade)
+  targetType LayerTarget
+  targetId   String        @db.Uuid
+
+  @@id([layerId, targetType, targetId])
+  @@index([targetType, targetId])
+  @@map("layer_assignment")
+}
+
+/// Working days of the week for a location or a company (ISO 1 = Mon … 7 = Sun). Default Mon–Fri.
+model WorkWeek {
+  id         String    @id @default(uuid()) @db.Uuid
+  locationId String?   @unique @db.Uuid
+  location   Location? @relation(fields: [locationId], references: [id])
+  companyId  String?   @unique @db.Uuid
+  company    Company?  @relation(fields: [companyId], references: [id])
+  days       Int[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("work_week")
+}
+
+// ───────────── Phase 2: absences and balances (PRD 5) ─────────────
+
+enum AccrualMode {
+  upfront
+  monthly
+}
+
+enum PeriodStart {
+  hire_date
+  jan_1
+}
+
+enum ExpiryMode {
+  end_of_period
+  months_after
+  never
+}
+
+enum DayCount {
+  working
+  calendar
+}
+
+enum LedgerType {
+  accrual
+  usage
+  expiry
+  /// transfer of the unused part into the next period (phase 2 plan, decision 6)
+  carryover
+  manual_adjustment
+}
+
+enum AbsenceStatus {
+  approved
+  cancelled
+}
+
+model AbsenceType {
+  id               String    @id @default(uuid()) @db.Uuid
+  code             String    @unique
+  nameUk           String
+  nameEn           String?
+  color            String    @default("#1f7a4d")
+  paid             Boolean   @default(true)
+  deductsBalance   Boolean   @default(false)
+  requiresDocument Boolean   @default(false)
+  requiresApproval Boolean   @default(true)
+  minDays          Decimal?  @db.Decimal(5, 1)
+  maxDays          Decimal?  @db.Decimal(5, 1)
+  allowHalfDay     Boolean   @default(false)
+  absences         Absence[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdById      String?   @db.Uuid
+  deletedAt        DateTime?
+
+  @@map("absence_type")
+}
+
+model AbsencePolicy {
+  id                 String           @id @default(uuid()) @db.Uuid
+  name               String           @unique
+  daysPerPeriod      Decimal          @db.Decimal(5, 1)
+  accrual            AccrualMode
+  periodStart        PeriodStart
+  expiry             ExpiryMode
+  expiryMonths       Int?
+  carryoverMax       Decimal          @default(0) @db.Decimal(5, 1)
+  availableAfterDays Int              @default(0)
+  allowNegative      Boolean          @default(false)
+  countDays          DayCount         @default(working)
+  employees          Employee[]
+  departments        Department[]
+  companies          Company[]
+  balances           AbsenceBalance[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  createdById        String?          @db.Uuid
+  deletedAt          DateTime?
+
+  @@map("absence_policy")
+}
+
+/// One accrual period of one employee under one policy; the balance itself is the sum of its ledger entries.
+model AbsenceBalance {
+  id          String               @id @default(uuid()) @db.Uuid
+  employeeId  String               @db.Uuid
+  employee    Employee             @relation(fields: [employeeId], references: [id])
+  policyId    String               @db.Uuid
+  policy      AbsencePolicy        @relation(fields: [policyId], references: [id])
+  periodStart DateTime             @db.Date
+  periodEnd   DateTime             @db.Date
+  /// set when the end-of-period carryover has been booked
+  closedAt    DateTime?
+  entries     AbsenceLedgerEntry[]
+  createdAt   DateTime             @default(now())
+
+  @@unique([employeeId, policyId, periodStart])
+  @@map("absence_balance")
+}
+
+model AbsenceLedgerEntry {
+  id             String         @id @default(uuid()) @db.Uuid
+  balanceId      String         @db.Uuid
+  balance        AbsenceBalance @relation(fields: [balanceId], references: [id])
+  type           LedgerType
+  amount         Decimal        @db.Decimal(6, 1)
+  date           DateTime       @db.Date
+  comment        String?
+  absenceId      String?        @db.Uuid
+  absence        Absence?       @relation(fields: [absenceId], references: [id])
+  /// technical: makes the daily job idempotent (e.g. "accrual:<balance>:<date>")
+  idempotencyKey String?        @unique
+  createdAt      DateTime       @default(now())
+  createdById    String?        @db.Uuid
+
+  @@index([balanceId])
+  @@map("absence_ledger_entry")
+}
+
+model Absence {
+  id          String               @id @default(uuid()) @db.Uuid
+  employeeId  String               @db.Uuid
+  employee    Employee             @relation(fields: [employeeId], references: [id])
+  typeId      String               @db.Uuid
+  type        AbsenceType          @relation(fields: [typeId], references: [id])
+  startDate   DateTime             @db.Date
+  endDate     DateTime             @db.Date
+  halfDay     Boolean              @default(false)
+  days        Decimal              @db.Decimal(5, 1)
+  status      AbsenceStatus        @default(approved)
+  requestId   String?              @unique @db.Uuid
+  request     Request?             @relation(fields: [requestId], references: [id])
+  documentId  String?              @db.Uuid
+  entries     AbsenceLedgerEntry[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  createdById String?              @db.Uuid
+
+  @@index([employeeId, startDate])
+  @@map("absence")
 }

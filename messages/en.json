@@ -31,7 +31,9 @@
     "requests": "Requests",
     "templates": "Templates",
     "systems": "Systems",
-    "assets": "Equipment"
+    "assets": "Equipment",
+    "calendar": "Calendar",
+    "settings": "Settings"
   },
   "login": {
     "title": "Sign in to People OS",
@@ -215,6 +217,9 @@
     },
     "assets": {
       "manage": "Equipment & licenses"
+    },
+    "balances": {
+      "adjust": "Manual time-off balance corrections"
     }
   },
   "import": {
@@ -223,9 +228,12 @@
     "kinds": {
       "org": "Companies & departments",
       "employees": "Employees",
-      "rates": "Rate history"
+      "rates": "Rate history",
+      "balances": "Starting time-off balances",
+      "accesses": "Granted access",
+      "assets": "Equipment & licenses"
     },
-    "order": "Order: companies & departments first, then employees, then rates. Locations are created under \"Org structure\".",
+    "order": "Order: companies & departments first, then employees, then rates, balances, access and equipment. Locations and systems are created in the UI.",
     "columns": "Template columns",
     "downloadTemplate": "Download template",
     "file": "CSV file",
@@ -438,7 +446,10 @@
     "hasDraft": "has draft",
     "notPublished": "not published",
     "meta": "Settings",
-    "saveMeta": "Save settings"
+    "saveMeta": "Save settings",
+    "optionsSource": "Options source",
+    "optionsList": "List below",
+    "optionsAbsenceTypes": "Absence types (dynamic)"
   },
   "systems": {
     "title": "Systems & access templates",
@@ -505,5 +516,152 @@
     "nothing": "Nothing",
     "licenses": "Licenses per month",
     "allTasks": "All tasks"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "prev": "← Previous",
+    "next": "Next →",
+    "today": "Today",
+    "weekdays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun"
+    ],
+    "layers": "Layers",
+    "mine": "mine",
+    "nonWorking": "day off",
+    "birthday": "birthday",
+    "anniversary": "{years} yr at the company",
+    "absence": "absence",
+    "subscribe": "Subscribe in Google Calendar",
+    "subscribeHint": "Add this link in Google Calendar → \"Other calendars\" → \"From URL\". The link is personal — do not share it.",
+    "getLink": "Get the link",
+    "rotate": "Issue a new one (the old link stops working)",
+    "copy": "Copy"
+  },
+  "settings": {
+    "title": "Settings",
+    "calendars": "Calendar layers",
+    "absences": "Absences & policies",
+    "layer": "Layer",
+    "newLayer": "New layer",
+    "name": "Name",
+    "nameEn": "Name (EN)",
+    "color": "Color",
+    "effect": "Effect",
+    "effects": {
+      "non_working": "Non-working days",
+      "informational": "Information only"
+    },
+    "visibility": "Visibility",
+    "visibilities": {
+      "all": "Everyone",
+      "assigned_only": "Assigned only"
+    },
+    "system": "system",
+    "source": "Source",
+    "sources": {
+      "manual": "manual",
+      "ics_import": "ICS",
+      "csv_import": "CSV",
+      "system": "system"
+    },
+    "assignments": "Assigned to",
+    "companies": "Companies",
+    "departments": "Departments",
+    "locations": "Locations",
+    "events": "Events",
+    "eventTitle": "Event title",
+    "eventTitleEn": "Title (EN)",
+    "date": "Date",
+    "endDate": "Until (optional)",
+    "yearly": "Every year",
+    "nonWorkingOverride": "Non-working",
+    "inherit": "as the layer",
+    "addEvent": "Add event",
+    "import": "ICS / CSV import",
+    "importHint": "CSV columns: date, end_date, title_uk, title_en, recurrence (yearly/none), non_working (yes/no).",
+    "importContent": "File contents or pasted text",
+    "preview": "Preview",
+    "commit": "Save",
+    "importSummary": "New: {create} · Duplicates: {duplicate} · Errors: {error}",
+    "workWeeks": "Work week",
+    "workWeekHint": "Mon–Fri by default. A location overrides its company.",
+    "types": "Absence types",
+    "newType": "New type",
+    "code": "Code",
+    "paid": "Paid",
+    "deducts": "Deducts balance",
+    "requiresDocument": "Document required",
+    "requiresApproval": "Approval required",
+    "halfDay": "Half days allowed",
+    "minDays": "Min days",
+    "maxDays": "Max days",
+    "policies": "Accrual policies",
+    "newPolicy": "New policy",
+    "daysPerPeriod": "Days per period",
+    "accrual": "Accrual",
+    "accruals": {
+      "upfront": "all at the start of the period",
+      "monthly": "monthly, pro rata"
+    },
+    "periodStart": "Period starts",
+    "periodStarts": {
+      "hire_date": "hire date",
+      "jan_1": "1 January"
+    },
+    "expiry": "Expiry",
+    "expiries": {
+      "end_of_period": "at the end of the period",
+      "months_after": "N months after the end",
+      "never": "never"
+    },
+    "expiryMonths": "N months",
+    "carryoverMax": "Max carryover",
+    "availableAfter": "Available after, days from hire",
+    "allowNegative": "Allow negative balance",
+    "countDays": "How days are counted",
+    "countDayModes": {
+      "working": "working",
+      "calendar": "calendar"
+    },
+    "assignPolicy": "Policy assignment",
+    "noPolicy": "— not assigned —",
+    "inheritedPolicy": "inherited",
+    "employees": "people"
+  },
+  "balance": {
+    "title": "Time off",
+    "balance": "Balance",
+    "days": "{n} d",
+    "policy": "Policy",
+    "noPolicy": "No policy assigned",
+    "ledger": "Ledger",
+    "types": {
+      "accrual": "Accrual",
+      "usage": "Usage",
+      "expiry": "Expiry",
+      "carryover": "Carryover",
+      "manual_adjustment": "Adjustment"
+    },
+    "absences": "Absences",
+    "noAbsences": "No absences",
+    "cancelled": "cancelled",
+    "cancel": "Cancel",
+    "adjust": "Manual correction",
+    "amount": "Days (+/−)",
+    "comment": "Comment (required)",
+    "apply": "Apply",
+    "request": "Request time off"
+  },
+  "dashboard3": {
+    "balance": "Time-off balance",
+    "upcoming": "Upcoming holidays & events",
+    "absentToday": "Out today",
+    "absentWeek": "Out this week"
   }
 }

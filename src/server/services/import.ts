@@ -9,6 +9,7 @@ import { prisma, type Tx } from "@/server/db";
 import { ValidationError } from "@/server/errors";
 import { planRateAppend } from "@/server/rates";
 import { appendRate } from "./employees";
+import { importAccesses, importAssets, importBalances } from "./import-extra";
 
 /**
  * Initial import (PRD 7): upload → preview with per-row errors → confirm.
@@ -16,7 +17,7 @@ import { appendRate } from "./employees";
  * (company, name), rates by (work_email, effective_from). Commit is all-or-nothing and refuses files with errors.
  */
 
-export const IMPORT_KINDS = ["org", "employees", "rates"] as const;
+export const IMPORT_KINDS = ["org", "employees", "rates", "balances", "accesses", "assets"] as const;
 export type ImportKind = (typeof IMPORT_KINDS)[number];
 
 export const IMPORT_TEMPLATES: Record<ImportKind, string[]> = {
@@ -40,6 +41,9 @@ export const IMPORT_TEMPLATES: Record<ImportKind, string[]> = {
     "locale",
   ],
   rates: ["work_email", "rate_type", "amount", "currency", "effective_from"],
+  balances: ["work_email", "days", "comment"],
+  accesses: ["work_email", "system", "access_level", "granted_at"],
+  assets: ["type", "name", "serial_or_seat", "monthly_cost", "currency", "assigned_to_email", "assigned_at"],
 };
 
 export type RowAction = "create" | "update" | "unchanged" | "error";
@@ -71,7 +75,7 @@ export async function runImport(actor: Actor, kind: string, csv: string, commit:
   const missing = REQUIRED_COLUMNS[kind as ImportKind].filter((c) => !(c in rows[0]));
   if (missing.length) throw new ValidationError({ columns: missing.map((c) => `missing: ${c}`) });
 
-  const importer = { org: importOrg, employees: importEmployees, rates: importRates }[kind as ImportKind];
+  const importer = { org: importOrg, employees: importEmployees, rates: importRates, balances: importBalances, accesses: importAccesses, assets: importAssets }[kind as ImportKind];
 
   // Preview runs exactly the same code as commit, inside a transaction that is rolled back.
   // Commit is rolled back as well when any row has errors.
@@ -107,6 +111,9 @@ const REQUIRED_COLUMNS: Record<ImportKind, string[]> = {
   org: ["company", "department"],
   employees: ["work_email", "first_name", "last_name", "company", "department", "position", "employment_type"],
   rates: IMPORT_TEMPLATES.rates,
+  balances: ["work_email", "days"],
+  accesses: ["work_email", "system", "access_level"],
+  assets: ["type", "name"],
 };
 
 const lineOf = (i: number) => i + 2; // header is line 1

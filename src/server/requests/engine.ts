@@ -12,6 +12,7 @@ import { resolveAssignee } from "./assignees";
 import { onComplete, onStart, type Values } from "./kinds";
 import { checklistSchema, onRejectSchema, optionsSchema, valueSchema, whoCanInitiateSchema } from "./schema";
 import { dueAt } from "./sla";
+import { nextIso, workingDayFn } from "@/server/calendar/core";
 
 /**
  * Request engine (PRD 4): a request pins a published template version; step groups run one after another,
@@ -88,8 +89,12 @@ export async function validateValues(
       continue;
     }
     if (f.type === "select" && options && !Array.isArray(options)) {
-      if (!(await tx.department.findFirst({ where: { id: value as string, deletedAt: null } }))) {
-        errors[f.key] = "department_not_found";
+      const exists =
+        options.source === "departments"
+          ? await tx.department.findFirst({ where: { id: value as string, deletedAt: null } })
+          : await tx.absenceType.findFirst({ where: { id: value as string, deletedAt: null } });
+      if (!exists) {
+        errors[f.key] = `${options.source}_not_found`;
         continue;
       }
     }
@@ -159,7 +164,8 @@ async function createRequestTx(
 ) {
   const values = await validateValues(tx, version.fields, rawValues, { optional: fillLaterKeys(version) });
   const kind = version.requestType.kind;
-  const subjectId = typeof values.employee === "string" ? values.employee : null;
+  // an absence is about the initiator unless the form names someone else
+  const subjectId = typeof values.employee === "string" ? values.employee : kind === "absence" ? initiatorId : null;
   const subject = subjectId ? await tx.employee.findUniqueOrThrow({ where: { id: subjectId } }) : null;
 
   // the initiator must be allowed to see the person the request is about
@@ -235,6 +241,12 @@ async function activateGroup(tx: Tx, actor: Actor | null, r: LoadedRequest, grou
   for (const tpl of r.version.steps.filter((s) => s.orderGroup === group)) {
     const targets: { systemId: string | null; ownerId?: string | null }[] =
       tpl.assigneeRule === "system_owner" ? await systemsForStep(tx, r, values) : [{ systemId: null }];
+    if (await skipStep(tx, r.version.requestType.kind, tpl, values)) {
+      await tx.stepInstance.create({
+        data: { requestId: r.id, stepTemplateId: tpl.id, orderGroup: group, status: "skipped", activatedAt: now, completedAt: now },
+      });
+      continue;
+    }
     for (const target of targets) {
       const assigneeId = await resolveAssignee(tx, tpl.assigneeRule, tpl.assigneeValue, {
         initiatorId: r.initiatorId,
@@ -277,9 +289,22 @@ async function systemsForStep(tx: Tx, r: LoadedRequest, values: Values) {
   return [];
 }
 
+/** SLA counts working days of the assignee's own calendar: their work week and non-working layers (PRD 4, 5). */
 async function computeDue(tx: Tx, assigneeId: string, from: Date, slaDays: number) {
-  const e = await tx.employee.findUnique({ where: { id: assigneeId }, select: { location: { select: { timezone: true } } } });
-  return dueAt(from, slaDays, e?.location?.timezone ?? "UTC");
+  const e = await tx.employee.findUniqueOrThrow({
+    where: { id: assigneeId },
+    select: { id: true, companyId: true, departmentId: true, locationId: true, location: { select: { timezone: true } } },
+  });
+  const start = from.toISOString().slice(0, 10);
+  const isWorking = await workingDayFn(tx, e, nextIso(start, -1), nextIso(start, slaDays * 3 + 31));
+  return dueAt(from, slaDays, e.location?.timezone ?? "UTC", isWorking);
+}
+
+/** Approval steps of an absence are skipped when its type needs no approval (e.g. sick leave). */
+async function skipStep(tx: Tx, kind: string, tpl: StepTemplate, values: Values) {
+  if (kind !== "absence" || tpl.stepType !== "approve" || typeof values.absence_type !== "string") return false;
+  const type = await tx.absenceType.findUnique({ where: { id: values.absence_type }, select: { requiresApproval: true } });
+  return type ? !type.requiresApproval : false;
 }
 
 async function completeRequest(tx: Tx, actor: Actor | null, r: LoadedRequest) {

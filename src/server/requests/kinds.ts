@@ -4,6 +4,8 @@ import { audit } from "@/server/audit";
 import type { Actor } from "@/server/authz/actor";
 import type { Tx } from "@/server/db";
 import { ValidationError } from "@/server/errors";
+import { bookUsage } from "@/server/absences/balance";
+import { checkAbsence, readAbsenceValues } from "@/server/absences/rules";
 
 /** Default probation length when the profile has none (phase 1 plan, decision 4). */
 export const PROBATION_DAYS = 90;
@@ -17,6 +19,10 @@ const todayUtc = (now = new Date()) => new Date(Date.UTC(now.getUTCFullYear(), n
  * Hook when a request starts. Offboarding marks the person as "offboarding" right away (decision 5).
  */
 export async function onStart(tx: Tx, actor: Actor | null, r: RequestCtx) {
+  if (r.kind === "absence" && r.subjectEmployeeId) {
+    // fail fast: type rules, overlaps, policy and balance are checked before anyone gets a step
+    await checkAbsence(tx, r.subjectEmployeeId, readAbsenceValues(r.values), { hasDocument: !!r.values.document });
+  }
   if (r.kind === "offboarding" && r.subjectEmployeeId) {
     const before = await tx.employee.findUniqueOrThrow({ where: { id: r.subjectEmployeeId } });
     await tx.employee.update({ where: { id: before.id }, data: { status: "offboarding" } });
@@ -45,6 +51,8 @@ export async function onComplete(tx: Tx, actor: Actor | null, r: RequestCtx) {
       return completeAccess(tx, actor, r);
     case "offboarding":
       return completeOffboarding(tx, actor, r);
+    case "absence":
+      return completeAbsence(tx, actor, r);
     default:
       throw new ValidationError({ kind: `${r.kind} is not available in this phase` });
   }
@@ -130,5 +138,41 @@ async function completeOffboarding(tx: Tx, actor: Actor | null, r: RequestCtx) {
     after: { status: "left", revokedGrants: grants.count, returnedAssets: assets.count, loginDisabled: !!employee.userId },
     departmentId: employee.departmentId,
     employeeId: employee.id,
+  });
+}
+
+/** Absence approved (PRD 4 kind absence): creates the Absence, books the usage, stores the document. */
+async function completeAbsence(tx: Tx, actor: Actor | null, r: RequestCtx) {
+  const employeeId = r.subjectEmployeeId!;
+  const input = readAbsenceValues(r.values);
+  const { type, days } = await checkAbsence(tx, employeeId, input, { hasDocument: !!r.values.document });
+  const employee = await tx.employee.findUniqueOrThrow({ where: { id: employeeId } });
+  const file = r.values.document as { fileKey: string; fileName: string; mimeType: string; size: number } | undefined;
+  const document = file
+    ? await tx.document.create({
+        data: { employeeId, type: "other", fileKey: file.fileKey, fileName: file.fileName, mimeType: file.mimeType, size: file.size, requestId: r.id, createdById: actor?.userId },
+      })
+    : null;
+  const absence = await tx.absence.create({
+    data: {
+      employeeId,
+      typeId: type.id,
+      startDate: parseIsoDate(input.from),
+      endDate: parseIsoDate(input.to),
+      halfDay: input.halfDay,
+      days,
+      requestId: r.id,
+      documentId: document?.id,
+      createdById: actor?.userId,
+    },
+  });
+  const usage = type.deductsBalance ? await bookUsage(tx, employeeId, days, absence.id) : null;
+  await audit(tx, actor, {
+    action: "request.absence.complete",
+    entity: "Absence",
+    entityId: absence.id,
+    after: { type: type.code, from: input.from, to: input.to, days, balance: usage },
+    departmentId: employee.departmentId,
+    employeeId,
   });
 }

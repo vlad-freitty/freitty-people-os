@@ -175,6 +175,36 @@ const DEFS: Def[] = [
   },
 ];
 
+DEFS.push({
+  code: "absence",
+  nameUk: "Відпустка або відсутність",
+  nameEn: "Time off",
+  kind: "absence",
+  who: { mode: "all" },
+  content: () => ({
+    fields: [
+      { key: "absence_type", labelUk: "Тип відсутності", labelEn: "Type", type: "select", options: { source: "absence_types" }, required: true },
+      { key: "dates", labelUk: "Дати", labelEn: "Dates", type: "date_range", required: true },
+      {
+        key: "half_day",
+        labelUk: "Пів дня",
+        labelEn: "Half day",
+        type: "select",
+        options: [
+          { value: "no", labelUk: "Ні", labelEn: "No" },
+          { value: "yes", labelUk: "Так, пів дня", labelEn: "Yes, half a day" },
+        ],
+        required: false,
+      },
+      { key: "document", labelUk: "Документ (лікарняний тощо)", labelEn: "Document (sick note etc.)", type: "file", required: false },
+      { key: "comment", labelUk: "Коментар", labelEn: "Comment", type: "textarea", required: false },
+    ],
+    steps: [
+      { orderGroup: 1, nameUk: "Погодження керівником відділу", nameEn: "Department head approval", stepType: "approve", assigneeRule: "subject_dept_head", slaDays: 2, onReject: close },
+    ],
+  }),
+});
+
 export async function seedStarterTemplates(prisma: PrismaClient) {
   const ids: Record<string, string> = {};
   for (const def of DEFS) {

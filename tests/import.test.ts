@@ -110,3 +110,31 @@ describe("rates import", () => {
     expect(res.rows[0].action).toBe("error");
   });
 });
+
+describe("phase 2 import kinds: balances, accesses, assets", () => {
+  it("each re-import changes nothing", async () => {
+    const policy = await prisma.absencePolicy.create({
+      data: { name: "imp", daysPerPeriod: 10, accrual: "upfront", periodStart: "hire_date", expiry: "end_of_period" },
+    });
+    const p1 = await prisma.employee.update({ where: { workEmail: "person01@example.test" }, data: { absencePolicyId: policy.id } });
+    await prisma.system.create({ data: { name: "HubSpot" } });
+
+    const balances = "work_email,days,comment\nperson01@example.test,4.5,\n";
+    expect((await runImport(admin, "balances", balances, true)).summary).toMatchObject({ create: 1, error: 0 });
+    expect((await runImport(admin, "balances", balances, true)).summary).toMatchObject({ create: 0, unchanged: 1 });
+    expect((await runImport(admin, "balances", balances.replace("4.5", "5"), true)).summary.error).toBe(1);
+    const entry = await prisma.absenceLedgerEntry.findFirstOrThrow({ where: { type: "manual_adjustment", balance: { employeeId: p1.id } } });
+    expect(entry.comment).toBe("початковий залишок");
+
+    const accesses = "work_email,system,access_level,granted_at\nperson01@example.test,hubspot,user,2025-01-10\n";
+    expect((await runImport(admin, "accesses", accesses, true)).summary).toMatchObject({ create: 1 });
+    expect((await runImport(admin, "accesses", accesses, true)).summary).toMatchObject({ create: 0, unchanged: 1 });
+    expect((await runImport(admin, "accesses", accesses.replace(",user,", ",admin,"), true)).summary).toMatchObject({ update: 1 });
+    expect(await prisma.accessGrant.count({ where: { employeeId: p1.id, revokedAt: null } })).toBe(1);
+
+    const assets = "type,name,serial_or_seat,monthly_cost,currency,assigned_to_email,assigned_at\nlaptop,ThinkPad,SN-1,,,person01@example.test,2025-01-10\nlicense,HubSpot seat,seat-9,45,usd,,\n";
+    expect((await runImport(admin, "assets", assets, true)).summary).toMatchObject({ create: 2, error: 0 });
+    expect((await runImport(admin, "assets", assets, true)).summary).toMatchObject({ create: 0, unchanged: 2 });
+    expect(await prisma.asset.count()).toBe(2);
+  });
+});

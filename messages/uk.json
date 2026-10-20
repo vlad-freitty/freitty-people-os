@@ -31,7 +31,9 @@
     "requests": "Заявки",
     "templates": "Шаблони",
     "systems": "Системи",
-    "assets": "Техніка"
+    "assets": "Техніка",
+    "calendar": "Календар",
+    "settings": "Налаштування"
   },
   "login": {
     "title": "Вхід до People OS",
@@ -215,6 +217,9 @@
     },
     "assets": {
       "manage": "Облік техніки й ліцензій"
+    },
+    "balances": {
+      "adjust": "Ручне коригування балансу відпусток"
     }
   },
   "import": {
@@ -223,9 +228,12 @@
     "kinds": {
       "org": "Компанії й відділи",
       "employees": "Співробітники",
-      "rates": "Історія ставок"
+      "rates": "Історія ставок",
+      "balances": "Стартові баланси відпусток",
+      "accesses": "Видані доступи",
+      "assets": "Техніка й ліцензії"
     },
-    "order": "Порядок: спершу компанії й відділи, потім співробітники, потім ставки. Локації створюються в «Оргструктурі».",
+    "order": "Порядок: спершу компанії й відділи, потім співробітники, потім ставки, баланси, доступи й техніка. Локації й системи створюються в інтерфейсі.",
     "columns": "Колонки шаблону",
     "downloadTemplate": "Завантажити шаблон",
     "file": "CSV-файл",
@@ -438,7 +446,10 @@
     "hasDraft": "є чернетка",
     "notPublished": "не опубліковано",
     "meta": "Налаштування",
-    "saveMeta": "Зберегти налаштування"
+    "saveMeta": "Зберегти налаштування",
+    "optionsSource": "Джерело варіантів",
+    "optionsList": "Список нижче",
+    "optionsAbsenceTypes": "Типи відсутностей (динамічно)"
   },
   "systems": {
     "title": "Системи й шаблони доступів",
@@ -505,5 +516,152 @@
     "nothing": "Нічого",
     "licenses": "Ліцензії на місяць",
     "allTasks": "Усі задачі"
+  },
+  "calendar": {
+    "title": "Календар",
+    "prev": "← Попередній",
+    "next": "Наступний →",
+    "today": "Сьогодні",
+    "weekdays": [
+      "Пн",
+      "Вт",
+      "Ср",
+      "Чт",
+      "Пт",
+      "Сб",
+      "Нд"
+    ],
+    "layers": "Шари",
+    "mine": "мій",
+    "nonWorking": "неробочий",
+    "birthday": "день народження",
+    "anniversary": "{years} р. у компанії",
+    "absence": "відсутність",
+    "subscribe": "Підписка для Google Calendar",
+    "subscribeHint": "Додайте це посилання в Google Calendar → «Інші календарі» → «З URL». Посилання особисте — не пересилайте його.",
+    "getLink": "Отримати посилання",
+    "rotate": "Перевипустити (старе перестане працювати)",
+    "copy": "Копіювати"
+  },
+  "settings": {
+    "title": "Налаштування",
+    "calendars": "Календарні шари",
+    "absences": "Відсутності й політики",
+    "layer": "Шар",
+    "newLayer": "Новий шар",
+    "name": "Назва",
+    "nameEn": "Назва (EN)",
+    "color": "Колір",
+    "effect": "Вплив",
+    "effects": {
+      "non_working": "Неробочі дні",
+      "informational": "Лише інформація"
+    },
+    "visibility": "Видимість",
+    "visibilities": {
+      "all": "Усім",
+      "assigned_only": "Лише призначеним"
+    },
+    "system": "системний",
+    "source": "Джерело",
+    "sources": {
+      "manual": "вручну",
+      "ics_import": "ICS",
+      "csv_import": "CSV",
+      "system": "система"
+    },
+    "assignments": "Кому призначено",
+    "companies": "Компанії",
+    "departments": "Відділи",
+    "locations": "Локації",
+    "events": "Події",
+    "eventTitle": "Назва події",
+    "eventTitleEn": "Назва (EN)",
+    "date": "Дата",
+    "endDate": "До (необов'язково)",
+    "yearly": "Щороку",
+    "nonWorkingOverride": "Неробочий",
+    "inherit": "як у шару",
+    "addEvent": "Додати подію",
+    "import": "Імпорт ICS / CSV",
+    "importHint": "CSV-колонки: date, end_date, title_uk, title_en, recurrence (yearly/none), non_working (так/ні).",
+    "importContent": "Вміст файлу або вставте текст",
+    "preview": "Попередній перегляд",
+    "commit": "Зберегти",
+    "importSummary": "Нових: {create} · Дублікатів: {duplicate} · Помилок: {error}",
+    "workWeeks": "Робочий тиждень",
+    "workWeekHint": "За замовчуванням Пн–Пт. Локація має пріоритет над компанією.",
+    "types": "Типи відсутностей",
+    "newType": "Новий тип",
+    "code": "Код",
+    "paid": "Оплачувана",
+    "deducts": "Списує баланс",
+    "requiresDocument": "Потрібен документ",
+    "requiresApproval": "Потрібне погодження",
+    "halfDay": "Можна пів дня",
+    "minDays": "Мін. днів",
+    "maxDays": "Макс. днів",
+    "policies": "Політики нарахування",
+    "newPolicy": "Нова політика",
+    "daysPerPeriod": "Днів за період",
+    "accrual": "Нарахування",
+    "accruals": {
+      "upfront": "одразу на початку періоду",
+      "monthly": "щомісяця пропорційно"
+    },
+    "periodStart": "Початок періоду",
+    "periodStarts": {
+      "hire_date": "дата найму",
+      "jan_1": "1 січня"
+    },
+    "expiry": "Згорання",
+    "expiries": {
+      "end_of_period": "у кінці періоду",
+      "months_after": "через N місяців після кінця",
+      "never": "ніколи"
+    },
+    "expiryMonths": "N місяців",
+    "carryoverMax": "Макс. перенесення",
+    "availableAfter": "Доступно після, днів від найму",
+    "allowNegative": "Дозволити мінус",
+    "countDays": "Як рахувати дні",
+    "countDayModes": {
+      "working": "робочі",
+      "calendar": "календарні"
+    },
+    "assignPolicy": "Призначення політик",
+    "noPolicy": "— не призначено —",
+    "inheritedPolicy": "успадковується",
+    "employees": "людей"
+  },
+  "balance": {
+    "title": "Відпустки",
+    "balance": "Баланс",
+    "days": "{n} дн.",
+    "policy": "Політика",
+    "noPolicy": "Політику не призначено",
+    "ledger": "Журнал",
+    "types": {
+      "accrual": "Нарахування",
+      "usage": "Використання",
+      "expiry": "Згорання",
+      "carryover": "Перенесення",
+      "manual_adjustment": "Коригування"
+    },
+    "absences": "Відсутності",
+    "noAbsences": "Відсутностей немає",
+    "cancelled": "скасовано",
+    "cancel": "Скасувати",
+    "adjust": "Ручне коригування",
+    "amount": "Днів (+/−)",
+    "comment": "Коментар (обов'язково)",
+    "apply": "Застосувати",
+    "request": "Подати заявку на відпустку"
+  },
+  "dashboard3": {
+    "balance": "Баланс відпусток",
+    "upcoming": "Найближчі свята й події",
+    "absentToday": "Сьогодні відсутні",
+    "absentWeek": "Відсутні цього тижня"
   }
 }

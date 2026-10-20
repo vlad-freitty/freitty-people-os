@@ -8,6 +8,9 @@ import { scopeOf } from "@/server/authz/policy";
 import { licenseCosts } from "@/server/services/assets";
 import { getDashboard, probationMilestones } from "@/server/services/dashboard";
 import { getMe } from "@/server/services/me";
+import { getBalance } from "@/server/services/absences";
+import { calendarView, canSeeTeamAbsences, visibleAbsences } from "@/server/services/calendar";
+import { isoWeekday, nextIso } from "@/server/calendar/core";
 import { listMyTasks, listNeedsAssignment, listOverdueSteps } from "@/server/services/requests";
 
 export default async function DashboardPage() {
@@ -25,12 +28,82 @@ export default async function DashboardPage() {
   const locale = await getLocale();
   const nothing = <p className="text-sm text-ink-mute">{t("dashboard2.nothing")}</p>;
 
+  // time off: own balance, upcoming holidays/birthdays, who is out (PRD 7)
+  const today = new Date().toISOString().slice(0, 10);
+  const weekEnd = nextIso(today, 7 - isoWeekday(today));
+  const [balance, upcoming, absentWeek] = await Promise.all([
+    me.employee ? getBalance(actor, me.employee.id) : Promise.resolve(null),
+    me.employee ? calendarView(actor, { from: today, to: nextIso(today, 14) }) : Promise.resolve(null),
+    canSeeTeamAbsences(actor) ? visibleAbsences(actor, today, weekEnd) : Promise.resolve([]),
+  ]);
+  const upcomingItems = (upcoming?.items ?? []).filter((i) => i.kind !== "absence").slice(0, 8);
+  const isoOf = (d: Date) => d.toISOString().slice(0, 10);
+  const absentToday = absentWeek.filter((a) => isoOf(a.startDate) <= today && isoOf(a.endDate) >= today);
+
   return (
     <>
       <PageTitle actions={me.employee && <LinkButton variant="secondary" href={`/employees/${me.employee.id}`}>{t("dashboard.myProfile")}</LinkButton>}>
         {t("dashboard.greeting", { name: me.employee?.name ?? me.email })}
       </PageTitle>
       <p className="-mt-4 mb-6 text-sm text-ink-soft">{t("dashboard.role", { role: localized(locale, me.role.nameUk, me.role.nameEn) })}</p>
+
+      <div className="mb-6 grid gap-6 lg:grid-cols-3">
+        {balance && (
+          <Card title={t("dashboard3.balance")} actions={<Link className="text-sm underline" href="/requests/new">{t("balance.request")}</Link>}>
+            <p className="font-display text-4xl font-semibold">{t("balance.days", { n: balance.balance })}</p>
+            <p className="text-xs text-ink-mute">{balance.policy?.name ?? t("balance.noPolicy")}</p>
+          </Card>
+        )}
+        {upcoming && (
+          <Card title={t("dashboard3.upcoming")} actions={<Link className="text-sm underline" href="/calendar">{t("nav.calendar")}</Link>}>
+            {upcomingItems.length === 0
+              ? nothing
+              : (
+                <ul className="space-y-1 text-sm">
+                  {upcomingItems.map((i, n) => (
+                    <li key={n} className="flex justify-between gap-2">
+                      <span className="truncate">
+                        {i.kind === "birthday" ? "🎂 " : i.kind === "anniversary" ? "🎉 " : ""}
+                        {i.kind === "event" ? localized(locale, i.title, i.titleEn) : i.title}
+                      </span>
+                      <span className={`whitespace-nowrap text-xs ${i.nonWorking ? "text-red-strong" : "text-ink-soft"}`}>{formatDate(i.date, locale)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+          </Card>
+        )}
+        {canSeeTeamAbsences(actor) && (
+          <Card title={t("dashboard3.absentToday")}>
+            {absentToday.length === 0
+              ? nothing
+              : (
+                <ul className="space-y-1 text-sm">
+                  {absentToday.map((a) => (
+                    <li key={a.id}>
+                      <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: a.type.color }} />
+                      {a.employee.firstName} {a.employee.lastName} · {localized(locale, a.type.nameUk, a.type.nameEn)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            {absentWeek.length > absentToday.length && (
+              <>
+                <p className="label mt-3">{t("dashboard3.absentWeek")}</p>
+                <ul className="space-y-1 text-sm">
+                  {absentWeek
+                    .filter((a) => !absentToday.includes(a))
+                    .map((a) => (
+                      <li key={a.id}>
+                        {a.employee.firstName} {a.employee.lastName} · {formatDate(isoOf(a.startDate), locale)} — {formatDate(isoOf(a.endDate), locale)}
+                      </li>
+                    ))}
+                </ul>
+              </>
+            )}
+          </Card>
+        )}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title={t("dashboard2.myTasks")} actions={tasks.length > 0 && <Link className="text-sm underline" href="/tasks">{t("dashboard2.allTasks")}</Link>}>

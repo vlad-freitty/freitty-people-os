@@ -9,7 +9,20 @@ at the start of a phase propose a task plan and schema changes, write code after
   open question for Сергій.
 - **Phase 1 — Request engine: done locally** (plan: `docs/phase-1-plan.md`, approved 2026-10-21 with all 6 recommendations).
   Acceptance tests in `tests/engine.test.ts`. Not deployed (same hosting blocker).
-- Phase 2 (calendars & absences) not started.
+- **Phase 2 — Calendars & absences: done locally** (plan: `docs/phase-2-plan.md`). Acceptance tests in `tests/absences.test.ts`.
+- From 2026-10-21 Vlad asked to run the remaining phases back to back: plan → build → tests → commit + push → next phase,
+  without waiting for a plan approval. Decisions are recorded in `docs/phase-N-plan.md` and below.
+
+## Calendar & absences map (phase 2)
+
+- `src/server/calendar/core.ts` — a person's layers (company, department chain, location, person), work week,
+  non-working dates, `workingDayFn` (used by absence day counts and by request SLA), `countAbsenceDays`.
+- `calendar/ics.ts` — ICS parse (import) and build (personal feed `/api/calendar/<token>.ics`).
+- `src/server/absences/balance.ts` — periods, accruals, carryover, expiry, FIFO usage; `syncBalance` is idempotent
+  (unique `idempotency_key`). `absences/rules.ts` — validation of an absence against its type and policy.
+- `services/calendar.ts`, `services/absences.ts` — settings CRUD, calendar view, balance view, adjustments.
+- Daily job: `npm run worker` (pg-boss, 00:30 Europe/Kyiv) runs `runDailyBalances`; balances are also synced before
+  every booking, so the app is correct even without the worker.
 
 ## Request engine map (phase 1)
 
@@ -31,6 +44,7 @@ npm run db          # local PostgreSQL 17 on :5433 (embedded, no Docker) — kee
 npm run db:migrate  # prisma migrate dev
 npm run db:seed     # fake data (example.test emails)
 npm run dev         # http://localhost:3000, dev login enabled via DEV_LOGIN=true
+npm run worker      # background jobs (pg-boss): daily balances; run next to the app
 npm test            # vitest: unit + integration against people_os_test
 npm run lint && npm run typecheck
 ```
@@ -82,6 +96,14 @@ npm run lint && npm run typecheck
 | 25 | Hiring needs fields `candidate_first_name/last_name/email`, filled by the "кандидат обраний" fill step; `department` is a select with `{source: "departments"}`. | Employee cannot be created without name and email. |
 | 26 | Child request (onboarding → ARM) starts automatically when its prefill (person + access bundle by position) is complete, otherwise the assignee starts it from the step. | PRD 4 template 4. |
 | 27 | Asset history: returning keeps the last holder (`assignedToId`) and sets `returnedAt`; full history is in the audit log. | No extra entity (PRD rule 3). |
+| 28 | Additions in phase 2: `CalendarEvent.nonWorking` (per-event override), `Company/Department.absencePolicyId` (policy assignment), ledger type `carryover`, `AbsenceBalance` = one accrual period, `idempotency_key`, `User.calendarToken`, permission `balances.adjust`. | PRD 5 text requires per-event flags and company/department assignment. |
+| 29 | Ukrainian holidays are seeded **informational** (martial law: working days) — Legal decides, superadmin flips the flag. US Federal is non-working for Columbus, OH. Holiday dates are demo data. | PRD 5 / open question. |
+| 30 | One balance pool per person = effective policy (person → department up the tree → company). | Phase 2 plan, decision 4. |
+| 31 | Approval steps of an absence are skipped when the type needs no approval; absences of the type "sick leave" need a document. | Phase 2 plan, decision 10. |
+| 32 | `subject_dept_head` / `initiator_dept_head` never resolve to the person themselves: a head's own request goes to the head of the parent department (or needs assignment). | A head must not approve their own request. |
+| 33 | SLA due dates use the assignee's calendar (work week + non-working layers) — phase 1's Mon–Fri is the fallback. | PRD 4: "SLA рахується в робочих днях за календарними шарами виконавця". |
+| 34 | Initial import also covers starting balances (`manual_adjustment` "початковий залишок"), granted access and assets. | PRD 7. |
+| 35 | `NEXT_DIST_DIR` env switches the build folder so a check build can run beside a dev server. | Tooling. |
 
 ## Open questions (from PRD 9 + new)
 
@@ -91,5 +113,6 @@ npm run lint && npm run typecheck
 - [x] Phase 1 — dept heads publish their department's templates themselves (decision 17).
 - [ ] Phase 1 — real list of systems and their owners (seed has placeholders); data retention after status `left` (Legal).
 - [ ] Phase 1 — S3-compatible bucket for documents in production (with hosting, Сергій).
-- [ ] Phase 2 — Ukrainian holidays as non-working days under martial law (Legal).
+- [ ] Phase 2 — Ukrainian holidays as non-working days under martial law (Legal) — seeded as informational, one flag to flip.
+- [ ] Phase 2 — official holiday lists for UA / US federal / US states (seed has demo dates for 2026–2027).
 - [ ] Phase 3 — non-working-day shift coefficient; which contractors need a monthly act/invoice (finance).

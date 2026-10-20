@@ -19,10 +19,10 @@ export type OnReject = z.infer<typeof onRejectSchema>;
 
 export const checklistSchema = z.array(z.object({ labelUk: z.string().min(1), labelEn: z.string().nullish() }));
 
-/** select / multiselect options; {source: "departments"} lists departments dynamically (used by kind hiring). */
+/** select / multiselect options; {source} lists departments (kind hiring) or absence types (kind absence) dynamically. */
 export const optionsSchema = z.union([
   z.array(z.object({ value: z.string().min(1), labelUk: z.string().min(1), labelEn: z.string().nullish() })),
-  z.object({ source: z.literal("departments") }),
+  z.object({ source: z.enum(["departments", "absence_types"]) }),
 ]);
 export type FieldOptions = z.infer<typeof optionsSchema>;
 
@@ -47,12 +47,15 @@ export const KIND_FIELDS: Record<RequestKind, { key: string; types: FieldType[] 
     { key: "employee", types: ["person"] },
     { key: "last_day", types: ["date"] },
   ],
-  absence: [],
+  absence: [
+    { key: "absence_type", types: ["select"] },
+    { key: "dates", types: ["date_range"] },
+  ],
   bonus: [],
 };
 
-/** Kinds whose entities exist in this phase. absence → phase 2, bonus → phase 3. */
-export const ENABLED_KINDS: RequestKind[] = ["generic", "hiring", "onboarding", "access", "offboarding"];
+/** Kinds whose entities exist so far. bonus → phase 3. */
+export const ENABLED_KINDS: RequestKind[] = ["generic", "hiring", "onboarding", "access", "offboarding", "absence"];
 
 export const STEP_TYPES_NEEDING_VALUE: Partial<Record<string, string>> = { person: "employee id", role_first_free: "role code" };
 

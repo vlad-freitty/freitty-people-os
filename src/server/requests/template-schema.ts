@@ -65,10 +65,12 @@ export async function validateTemplate(tx: Tx, kind: RequestKind, content: Draft
     if (!type) errors.push(`kind ${kind}: field "${need.key}" (${need.types.join("/")}) is required`);
     else if (!need.types.includes(type as never)) errors.push(`kind ${kind}: field "${need.key}" must be ${need.types.join("/")}`);
   }
-  if (kind === "hiring") {
-    const dept = content.fields.find((f) => f.key === "department");
-    if (dept && (Array.isArray(dept.options) || !dept.options)) errors.push(`field department: options must be {source: "departments"}`);
-  }
+  const sourced = (key: string, source: string) => {
+    const f = content.fields.find((x) => x.key === key);
+    if (f && (!f.options || Array.isArray(f.options) || f.options.source !== source)) errors.push(`field ${key}: options must be {source: "${source}"}`);
+  };
+  if (kind === "hiring") sourced("department", "departments");
+  if (kind === "absence") sourced("absence_type", "absence_types");
 
   if (content.steps.length === 0) errors.push("at least one step is required");
   const hasSystemsField = content.fields.some((f) => f.type === "systems");
@@ -85,7 +87,7 @@ export async function validateTemplate(tx: Tx, kind: RequestKind, content: Draft
     if (s.assigneeRule === "system_owner" && !hasSystemsField && kind !== "offboarding") {
       errors.push(`${label}: "system owner" needs a systems field (or kind offboarding)`);
     }
-    if (s.assigneeRule === "subject_dept_head" && !keys.has("employee") && kind !== "hiring") {
+    if (s.assigneeRule === "subject_dept_head" && !keys.has("employee") && kind !== "hiring" && kind !== "absence") {
       errors.push(`${label}: "head of the employee's department" needs a person field "employee"`);
     }
     if (s.stepType === "fill") {

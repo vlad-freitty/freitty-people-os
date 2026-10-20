@@ -12,6 +12,7 @@ npm run db                    # terminal 1: local PostgreSQL on :5433, keep it r
 npx prisma migrate deploy     # terminal 2
 npm run db:seed
 npm run dev                   # http://localhost:3000 → "Dev login" → pick a user
+npm run worker                # optional: background jobs (daily time-off balances)
 ```
 
 Seeded users (fake): superadmin `superadmin@example.test`, CEO `ceo@example.test`, dept heads

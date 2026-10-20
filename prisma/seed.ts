@@ -2,6 +2,7 @@
 import { PrismaClient, type EmploymentType, type RateType } from "@prisma/client";
 import { ensureSystemRoles } from "../src/server/seed/roles";
 import { seedStarterTemplates } from "../src/server/seed/templates";
+import { ensureAbsenceTypes, ensureHolidayLayer, ensureSystemLayers, FREITTY_STANDARD, HOLIDAYS } from "../src/server/seed/calendar";
 
 const prisma = new PrismaClient();
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
@@ -188,6 +189,28 @@ async function main() {
       ],
     });
   }
+  // Phase 2: calendars, absence types, the standard policy for every company
+  await ensureSystemLayers(prisma);
+  await ensureAbsenceTypes(prisma);
+  const standard =
+    (await prisma.absencePolicy.findUnique({ where: { name: FREITTY_STANDARD.name } })) ?? (await prisma.absencePolicy.create({ data: FREITTY_STANDARD }));
+  await prisma.company.updateMany({ where: { absencePolicyId: null }, data: { absencePolicyId: standard.id } });
+  await ensureHolidayLayer(prisma, {
+    nameUk: "Свята Україна",
+    nameEn: "Ukraine public holidays",
+    color: "#2563eb",
+    effect: "informational", // martial law: working days until Legal decides otherwise (phase 2 plan, decision 3)
+    holidays: HOLIDAYS.UA_HOLIDAYS,
+    assign: [{ targetType: "location", targetId: locations.Kyiv }],
+  });
+  await ensureHolidayLayer(prisma, {
+    nameUk: "US Federal",
+    nameEn: "US Federal holidays",
+    color: "#b91c1c",
+    effect: "non_working",
+    holidays: HOLIDAYS.US_FEDERAL,
+    assign: [{ targetType: "location", targetId: locations["Columbus, OH"] }],
+  });
   await seedStarterTemplates(prisma);
 
   console.log(`Seeded: ${people.length + 1} employees, ${Object.keys(departments).length} departments, ${Object.keys(systems).length} systems, starter templates.`);

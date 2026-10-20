@@ -5,7 +5,9 @@ import { RateForm } from "@/components/rate-form";
 import { Badge, Card, DefinitionList, LinkButton, PageTitle, statusTone } from "@/components/ui";
 import { formatDate, formatMoney, formatMonthDay, localized } from "@/lib/format";
 import { getActor } from "@/server/auth/session";
-import { can } from "@/server/authz/policy";
+import { can, scopeOf } from "@/server/authz/policy";
+import { getBalance } from "@/server/services/absences";
+import { BalanceAdjustForm, CancelAbsenceButton } from "@/components/balance-actions";
 import { NotFoundError } from "@/server/errors";
 import { getEmployee, listRates } from "@/server/services/employees";
 import { listEmployeeAssets } from "@/server/services/assets";
@@ -32,6 +34,8 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
     e.access === "basic"
       ? [[], [], []]
       : await Promise.all([listGrants(actor, e.id), listEmployeeAssets(actor, e.id), e.access === "sensitive" ? listDocuments(actor, e.id) : []]);
+  const balance = e.access === "basic" ? null : await getBalance(actor, e.id);
+  const canAdjust = scopeOf(actor, "balances.adjust") === "all";
   const none = t("common.none");
 
   const basicItems = [
@@ -145,6 +149,57 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
           </Card>
         )}
       </div>
+
+      {balance && (
+        <Card className="mt-6" title={t("balance.title")} actions={e.id === actor.employeeId && <LinkButton variant="secondary" href="/requests/new">{t("balance.request")}</LinkButton>}>
+          <div className="grid gap-6 lg:grid-cols-[1fr_2fr_2fr]">
+            <div>
+              <p className="label">{t("balance.balance")}</p>
+              <p className="font-display text-4xl font-semibold">{t("balance.days", { n: balance.balance })}</p>
+              <p className="mt-1 text-xs text-ink-mute">
+                {balance.policy ? `${t("balance.policy")}: ${balance.policy.name}` : t("balance.noPolicy")}
+              </p>
+            </div>
+            <div>
+              <p className="label">{t("balance.absences")}</p>
+              {balance.absences.length === 0 ? (
+                <p className="text-sm text-ink-mute">{t("balance.noAbsences")}</p>
+              ) : (
+                <ul className="space-y-1.5 text-sm">
+                  {balance.absences.slice(0, 12).map((a) => (
+                    <li key={a.id} className={`flex items-center justify-between gap-2 ${a.status === "cancelled" ? "text-ink-mute line-through" : ""}`}>
+                      <span>
+                        <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: a.type.color }} />
+                        {localized(locale, a.type.nameUk, a.type.nameEn)} · {formatDate(a.from, locale)}
+                        {a.to !== a.from && <> — {formatDate(a.to, locale)}</>} · {t("balance.days", { n: a.days })}
+                      </span>
+                      {a.status === "approved" && canAdjust && <CancelAbsenceButton absenceId={a.id} />}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div>
+              <p className="label">{t("balance.ledger")}</p>
+              <ul className="max-h-56 space-y-1 overflow-auto text-xs">
+                {balance.entries.map((x) => (
+                  <li key={x.id} className="flex justify-between gap-2 border-b border-line/50 pb-1">
+                    <span>
+                      {formatDate(x.date, locale)} · {t(`balance.types.${x.type}`)}
+                      {x.comment && x.type === "manual_adjustment" && <span className="text-ink-mute"> · {x.comment}</span>}
+                    </span>
+                    <span className={`font-mono ${x.amount < 0 ? "text-red-strong" : "text-ok"}`}>
+                      {x.amount > 0 ? "+" : ""}
+                      {x.amount}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {canAdjust && <BalanceAdjustForm employeeId={e.id} />}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {e.access !== "basic" && (
         <div className="mt-6 grid gap-6 lg:grid-cols-3">

@@ -6,7 +6,7 @@ import { api } from "./api";
 import { ErrorBox } from "./error-box";
 import { Badge, Button, buttonClass, Field } from "./ui";
 
-type Kind = "org" | "employees" | "rates";
+type Kind = "org" | "employees" | "rates" | "balances" | "accesses" | "assets";
 type Result = {
   committed: boolean;
   rows: { line: number; key: string; action: "create" | "update" | "unchanged" | "error"; errors: string[] }[];
@@ -52,7 +52,7 @@ export function ImportWizard({ templates }: { templates: Record<Kind, string[]> 
               setResult(null);
             }}
           >
-            {(["org", "employees", "rates"] as const).map((k) => (
+            {(["org", "employees", "rates", "balances", "accesses", "assets"] as const).map((k) => (
               <option key={k} value={k}>
                 {t(`kinds.${k}`)}
               </option>

@@ -21,7 +21,8 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
     if (err instanceof NotFoundError) notFound();
     throw err;
   });
-  const [t, locale, lookups] = await Promise.all([getTranslations(), getLocale(), requestLookups(actor)]);
+  const locale = await getLocale();
+  const [t, lookups] = await Promise.all([getTranslations(), requestLookups(actor, locale)]);
   const groups = [...new Set(r.steps.map((s) => s.group))].sort((a, b) => a - b);
   const fieldDefs = r.fields as FieldDef[];
 

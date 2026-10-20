@@ -11,13 +11,14 @@ export type FieldDef = {
   labelEn: string | null;
   type: "text" | "textarea" | "number" | "date" | "date_range" | "select" | "multiselect" | "person" | "file" | "systems";
   required: boolean;
-  options: { value: string; labelUk: string; labelEn?: string | null }[] | { source: "departments" } | null;
+  options: { value: string; labelUk: string; labelEn?: string | null }[] | { source: "departments" | "absence_types" } | null;
 };
 
 export type Lookups = {
   people: { id: string; label: string }[];
   systems: { id: string; name: string }[];
   departments: { id: string; label: string }[];
+  absenceTypes: { id: string; label: string }[];
 };
 
 type SystemsValue = { systemId: string; level: string }[];
@@ -62,7 +63,7 @@ export function FieldInput({
       case "select": {
         const options = Array.isArray(field.options)
           ? field.options.map((o) => ({ value: o.value, label: localized(locale, o.labelUk, o.labelEn) }))
-          : lookups.departments.map((d) => ({ value: d.id, label: d.label }));
+          : (field.options?.source === "absence_types" ? lookups.absenceTypes : lookups.departments).map((d) => ({ value: d.id, label: d.label }));
         return (
           <select className="field" value={str} onChange={(e) => onChange(e.target.value)} required={field.required}>
             <option value="" />

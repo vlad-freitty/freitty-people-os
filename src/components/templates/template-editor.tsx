@@ -10,7 +10,8 @@ import { Badge, Button, Card, Field } from "../ui";
 
 type FieldType = "text" | "textarea" | "number" | "date" | "date_range" | "select" | "multiselect" | "person" | "file" | "systems";
 type Option = { value: string; labelUk: string; labelEn?: string | null };
-type FieldDraft = { key: string; labelUk: string; labelEn?: string | null; type: FieldType; options?: Option[] | { source: "departments" } | null; required: boolean };
+type Source = "departments" | "absence_types";
+type FieldDraft = { key: string; labelUk: string; labelEn?: string | null; type: FieldType; options?: Option[] | { source: Source } | null; required: boolean };
 type StepType = "approve" | "task" | "fill" | "document" | "child_request";
 type Rule = "person" | "initiator" | "initiator_dept_head" | "subject_dept_head" | "system_owner" | "role_first_free";
 type StepDraft = {
@@ -333,18 +334,21 @@ export function TemplateEditor({ template, people, roles, childTypes, department
 
 function OptionsEditor({ field, onChange }: { field: FieldDraft; onChange: (o: FieldDraft["options"]) => void }) {
   const t = useTranslations("templates");
-  const isDept = !!field.options && !Array.isArray(field.options);
+  const source = field.options && !Array.isArray(field.options) ? field.options.source : "";
   const lines = Array.isArray(field.options) ? field.options.map((o) => [o.value, o.labelUk, o.labelEn ?? ""].filter(Boolean).join(" | ")).join("\n") : "";
   const [text, setText] = useState(lines);
   return (
     <div className="mt-2 space-y-2">
       {field.type === "select" && (
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={isDept} onChange={(e) => onChange(e.target.checked ? { source: "departments" } : [])} />
-          {t("optionsDepartments")}
-        </label>
+        <Field label={t("optionsSource")}>
+          <select className="field max-w-xs" value={source} onChange={(e) => onChange(e.target.value ? { source: e.target.value as Source } : [])}>
+            <option value="">{t("optionsList")}</option>
+            <option value="departments">{t("optionsDepartments")}</option>
+            <option value="absence_types">{t("optionsAbsenceTypes")}</option>
+          </select>
+        </Field>
       )}
-      {!isDept && (
+      {!source && (
         <Field label={`${t("options")} · value | UA | EN`}>
           <textarea
             className="field min-h-20 font-mono text-xs"

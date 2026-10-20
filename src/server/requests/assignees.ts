@@ -28,10 +28,10 @@ export async function resolveAssignee(tx: Tx, rule: AssigneeRule, value: string 
       return ctx.initiatorId;
     case "initiator_dept_head": {
       const initiator = await tx.employee.findUnique({ where: { id: ctx.initiatorId }, select: { departmentId: true } });
-      return initiator ? nearestHead(tx, initiator.departmentId) : null;
+      return initiator ? nearestHead(tx, initiator.departmentId, ctx.initiatorId) : null;
     }
     case "subject_dept_head":
-      return ctx.subjectDepartmentId ? nearestHead(tx, ctx.subjectDepartmentId) : null;
+      return ctx.subjectDepartmentId ? nearestHead(tx, ctx.subjectDepartmentId, ctx.subjectEmployeeId) : null;
     case "system_owner": {
       if (!ctx.systemOwnerId) return null;
       const e = await tx.employee.findFirst({ where: { id: ctx.systemOwnerId, ...ACTIVE_PERSON }, select: { id: true } });
@@ -48,8 +48,11 @@ export async function resolveAssignee(tx: Tx, rule: AssigneeRule, value: string 
   }
 }
 
-/** Head of the department; if it has none, the head of the closest parent department. */
-async function nearestHead(tx: Tx, departmentId: string): Promise<string | null> {
+/**
+ * Head of the department; if it has none, the head of the closest parent department.
+ * A head never approves their own request: for a person who heads the department we go one level up.
+ */
+async function nearestHead(tx: Tx, departmentId: string, exceptId: string | null): Promise<string | null> {
   let current: string | null = departmentId;
   const seen = new Set<string>();
   while (current && !seen.has(current)) {
@@ -59,7 +62,8 @@ async function nearestHead(tx: Tx, departmentId: string): Promise<string | null>
       select: { parentId: true, heads: { where: { employee: ACTIVE_PERSON }, select: { employeeId: true } } },
     });
     if (!dept) return null;
-    if (dept.heads.length) return leastLoaded(tx, dept.heads.map((h) => h.employeeId));
+    const heads = dept.heads.map((h) => h.employeeId).filter((id) => id !== exceptId);
+    if (heads.length) return leastLoaded(tx, heads);
     current = dept.parentId;
   }
   return null;

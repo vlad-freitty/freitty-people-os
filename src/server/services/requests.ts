@@ -161,28 +161,33 @@ export async function getRequest(actor: Actor, id: string) {
   };
 }
 
-type Refs = { employees: Map<string, string>; systems: Map<string, string>; departments: Map<string, string> };
+type Refs = { employees: Map<string, string>; systems: Map<string, string>; departments: Map<string, string>; absenceTypes: Map<string, string> };
 
 async function resolveRefs(fields: { key: string; type: string; options: unknown }[], values: Record<string, unknown>): Promise<Refs> {
   const employeeIds: string[] = [];
   const systemIds: string[] = [];
   const departmentIds: string[] = [];
+  const absenceTypeIds: string[] = [];
   for (const f of fields) {
     const v = values[f.key];
     if (v == null) continue;
     if (f.type === "person") employeeIds.push(String(v));
     if (f.type === "systems") systemIds.push(...(v as { systemId: string }[]).map((s) => s.systemId));
-    if (f.type === "select" && f.options && !Array.isArray(f.options)) departmentIds.push(String(v));
+    if (f.type === "select" && f.options && !Array.isArray(f.options)) {
+      ((f.options as { source: string }).source === "absence_types" ? absenceTypeIds : departmentIds).push(String(v));
+    }
   }
-  const [employees, systems, departments] = await Promise.all([
+  const [employees, systems, departments, absenceTypes] = await Promise.all([
     prisma.employee.findMany({ where: { id: { in: employeeIds } }, select: { id: true, firstName: true, lastName: true } }),
     prisma.system.findMany({ where: { id: { in: systemIds } }, select: { id: true, name: true } }),
     prisma.department.findMany({ where: { id: { in: departmentIds } }, select: { id: true, name: true } }),
+    prisma.absenceType.findMany({ where: { id: { in: absenceTypeIds } }, select: { id: true, nameUk: true } }),
   ]);
   return {
     employees: new Map(employees.map((e) => [e.id, name(e)!])),
     systems: new Map(systems.map((s) => [s.id, s.name])),
     departments: new Map(departments.map((d) => [d.id, d.name])),
+    absenceTypes: new Map(absenceTypes.map((t) => [t.id, t.nameUk])),
   };
 }
 
@@ -192,6 +197,7 @@ function displayValue(type: string, v: unknown, refs: Refs): unknown {
   if (type === "person") return refs.employees.get(String(v)) ?? String(v);
   if (type === "systems") return (v as { systemId: string; level: string }[]).map((s) => ({ system: refs.systems.get(s.systemId) ?? s.systemId, level: s.level }));
   if (type === "select" && refs.departments.has(String(v))) return refs.departments.get(String(v));
+  if (type === "select" && refs.absenceTypes.has(String(v))) return refs.absenceTypes.get(String(v));
   if (type === "file") {
     const f = v as { fileKey: string; fileName: string; mimeType: string };
     return { fileName: f.fileName, url: signedFileUrl(f) };

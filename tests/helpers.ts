@@ -4,6 +4,7 @@ import { prisma } from "@/server/db";
 import { ensureSystemRoles } from "@/server/seed/roles";
 
 const TABLES = [
+  "absence_ledger_entry", "absence_balance", "absence", "absence_policy", "absence_type", "layer_assignment", "calendar_event", "calendar_layer", "work_week",
   "comment", "step_instance", "request_field_value", "access_grant", "document", "request", "step_template", "form_field",
   "request_type_version", "request_type", "asset", "access_bundle_item", "access_bundle", "system",
   "audit_log", "rate_history", "department_head", "employee", "app_user", "role_permission", "role", "department", "location", "company",

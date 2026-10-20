@@ -21,6 +21,8 @@ export const PERMISSIONS = {
   "audit.view": { scopes: ["all", "departments", "self"], group: "admin" },
   "systems.manage": { scopes: ["all"], group: "admin" },
   "assets.manage": { scopes: ["all"], group: "admin" },
+  /** manual balance corrections (PRD 5: superadmin only by default) */
+  "balances.adjust": { scopes: ["all"], group: "admin" },
   "templates.manage": { scopes: ["all", "departments"], group: "requests" },
   "templates.publish": { scopes: ["all", "departments"], group: "requests" },
   "requests.initiate": { scopes: ["all"], group: "requests" },
