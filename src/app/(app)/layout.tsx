@@ -7,11 +7,14 @@ import { NavLinks } from "@/components/nav-links";
 import { getActorOrNull } from "@/server/auth/session";
 import { hasPermission, scopeOf } from "@/server/authz/policy";
 import { getMe } from "@/server/services/me";
+import { unreadCount } from "@/server/services/notifications";
+import Link from "next/link";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const actor = await getActorOrNull();
   if (!actor) redirect("/login");
   const me = await getMe(actor);
+  const unread = await unreadCount(actor);
   const t = await getTranslations();
 
   const links = [
@@ -42,6 +45,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <NavLinks links={links} />
           </div>
           <div className="ml-auto flex items-center gap-3">
+            <Link href="/notifications" aria-label={t("notifications.bell", { n: unread })} className="relative rounded-md px-1.5 py-1 hover:bg-cream-deep">
+              <span aria-hidden>🔔</span>
+              {unread > 0 && <span className="absolute -top-1 -right-1 min-w-4 rounded-full bg-red px-1 text-center text-[10px] font-semibold leading-4 text-white">{unread > 99 ? "99+" : unread}</span>}
+            </Link>
             <LocaleToggle />
             <span className="hidden text-sm text-ink-soft md:inline">{me.employee?.name ?? me.email}</span>
             <form

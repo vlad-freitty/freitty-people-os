@@ -36,7 +36,8 @@
     "calendar": "Calendar",
     "settings": "Settings",
     "shifts": "Shifts",
-    "payments": "Payments"
+    "payments": "Payments",
+    "notifications": "Notifications"
   },
   "login": {
     "title": "Sign in to People OS",
@@ -798,5 +799,42 @@
     "errorText": "Please try again. If it keeps happening, contact the administrator.",
     "retry": "Try again",
     "home": "Go home"
+  },
+  "telegram": {
+    "step_assigned": "🟡 New task: {step}\n{number} · {type}\nDue: {due}\n{url}",
+    "step_overdue": "🔴 Overdue: {step}\n{number} · {type}\nWas due: {due}\n{url}",
+    "request_done": "✅ Request completed: {number} · {type}\n{url}",
+    "request_rejected": "⛔ Request rejected: {number} · {type}\n{comment}\n{url}",
+    "linked": "Done! People OS notifications will arrive here. Send /stop to turn them off.",
+    "unlinked": "People OS notifications are off for this chat.",
+    "badCode": "The code is invalid or expired. Generate a new one in your People OS profile.",
+    "help": "This is the People OS bot. To connect notifications: your People OS profile → \"Notifications\" → \"Connect Telegram\"."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "markAll": "Mark all as read",
+    "bell": "Notifications: {n} unread",
+    "types": {
+      "step_assigned": "New task",
+      "step_overdue": "Overdue step",
+      "request_done": "Request completed",
+      "request_rejected": "Request rejected"
+    },
+    "channels": {
+      "in_app": "In the app",
+      "telegram": "Telegram"
+    },
+    "settings": "Notifications",
+    "telegram": "Telegram",
+    "notConfigured": "The bot is not configured by the administrator yet (no TELEGRAM_BOT_TOKEN). In-app notifications work.",
+    "linked": "Telegram connected",
+    "notLinked": "Telegram not connected",
+    "connect": "Connect Telegram",
+    "disconnect": "Disconnect",
+    "openBot": "Open the bot",
+    "codeHint": "Open the bot with the link or send it: /start {code} (the code is valid for {minutes} min).",
+    "save": "Save",
+    "type": "Event"
   }
 }

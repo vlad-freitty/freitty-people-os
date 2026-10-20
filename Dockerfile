@@ -22,3 +22,8 @@ COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 EXPOSE 3000
 CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node server.js"]
+
+# Background jobs (balances, overdue notices, Telegram): docker build --target worker -t people-os-worker .
+FROM build AS worker
+ENV NODE_ENV=production
+CMD ["npx", "tsx", "scripts/worker.ts"]

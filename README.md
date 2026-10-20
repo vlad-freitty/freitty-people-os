@@ -12,7 +12,7 @@ npm run db                    # terminal 1: local PostgreSQL on :5433, keep it r
 npx prisma migrate deploy     # terminal 2
 npm run db:seed
 npm run dev                   # http://localhost:3000 → "Dev login" → pick a user
-npm run worker                # optional: background jobs (daily time-off balances)
+npm run worker                # background jobs: daily balances, overdue notices, Telegram bot
 ```
 
 Seeded users (fake): superadmin `superadmin@example.test`, CEO `ceo@example.test`, dept heads
@@ -32,5 +32,7 @@ npm test        # needs `npm run db` running; uses the people_os_test database
   `AUTH_MICROSOFT_ENTRA_ID_ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0`, `AUTH_SECRET`, `AUTH_URL`,
   `DATABASE_URL`, `SUPERADMIN_EMAIL`. `DEV_LOGIN` has no effect in production.
 - `docker build -t people-os .` — the container runs `prisma migrate deploy` on start.
+- Run the worker next to the web container: `docker build --target worker -t people-os-worker .` — daily balances, overdue notices,
+  Telegram delivery. Telegram needs `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` (see `.env.example`).
 
 Decisions, deviations from the PRD and open questions: see [CLAUDE.md](CLAUDE.md).

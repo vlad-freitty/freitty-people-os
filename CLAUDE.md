@@ -14,6 +14,9 @@ at the start of a phase propose a task plan and schema changes, write code after
   (model CS month vs hand calculation, contractor without act). The real-month check with finance happens on staging.
 - **Phase 4 — Dashboards & polish: done locally** (plan: `docs/phase-4-plan.md`). Dashboard = one page with "Моє" /
   "Команда" / "Компанії й фінанси" blocks shown by permission; phone layout checked at 375 px on every page.
+- **Phase 5 — Telegram bot: done locally** (plan: `docs/phase-5-plan.md`). Tested with a fake Bot API transport;
+  real delivery needs a bot from @BotFather (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`) — not created yet.
+- All PRD phases are built locally. Not deployed anywhere: hosting, Entra ID registration and the bot token are open.
 - From 2026-10-21 Vlad asked to run the remaining phases back to back: plan → build → tests → commit + push → next phase,
   without waiting for a plan approval. Decisions are recorded in `docs/phase-N-plan.md` and below.
 
@@ -123,11 +126,16 @@ npm run lint && npm run typecheck
 | 38 | Cost split: shifts are paid in the period of the company written on the shift; monthly rates and bonuses — of the employee's company. | PRD 6. |
 | 39 | A contractor payment can be approved only with an `act`/`invoice` Document whose `period` is the period's month or whose validity overlaps it — for all contractors until finance says otherwise. | PRD 6 + open question. |
 | 40 | Role `finance` defaults: `payments.manage`, `employees.view` and `employees.view_sensitive` on everyone (SQL data migration upgrades untouched defaults only). | Finance calculates and pays. |
+| 41 | Bonus currency = the request's `currency` field, else the person's latest rate currency, else USD. | PRD 6 lists no currency field. |
 | 42 | Phone layout: header menu button below `md`, calendar agenda list below `sm`, wide tables scroll inside their card; grid columns that hold tables need `min-w-0`. | PRD 8, phase 4: every PRD 7 scenario on a phone. |
 | 43 | Localized 404 (`app/not-found.tsx`), error boundary and loading skeleton for the signed-in area. | Polish. |
-| 41 | Bonus currency = the request's `currency` field, else the person's latest rate currency, else USD. | PRD 6 lists no currency field. |
+| 44 | Notifications: `Notification` (in_app / telegram) written in the same transaction as the request change; worker delivers Telegram every 10 s (≤ 5 attempts) and announces overdue steps every 5 min (once per step via `StepInstance.overdueNotifiedAt`). | PRD 3, 8: "протягом 1 хвилини". |
+| 45 | Telegram link: one-time code (15 min) from the profile → `/start <code>` in the bot; `/stop` or the profile button unlinks. Bot updates by long polling in the worker, or a webhook `/api/telegram/webhook` when `TELEGRAM_WEBHOOK_SECRET` is set. | Works without a public URL. |
+| 46 | Additions in phase 5: `User.telegramChatId/telegramLinkCode/telegramLinkExpires/notificationPrefs`, notification delivery fields, in-app bell and `/notifications` page. | PRD 3 lists channel in_app. |
 
 ## Open questions (from PRD 9 + new)
+
+- [ ] Phase 5 — create the Telegram bot in @BotFather and put `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` into the environment; then check one real "new step" message.
 
 - [ ] Phase 0 — hosting, staging, where personal data physically lives (Сергій).
 - [ ] Phase 0 — Entra ID app registration: tenant id, client id, secret, redirect URI `https://<host>/api/auth/callback/microsoft-entra-id`.

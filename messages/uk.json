@@ -36,7 +36,8 @@
     "calendar": "Календар",
     "settings": "Налаштування",
     "shifts": "Зміни",
-    "payments": "Оплати"
+    "payments": "Оплати",
+    "notifications": "Сповіщення"
   },
   "login": {
     "title": "Вхід до People OS",
@@ -798,5 +799,42 @@
     "errorText": "Спробуйте ще раз. Якщо помилка повторюється — напишіть адміністратору.",
     "retry": "Спробувати ще раз",
     "home": "На головну"
+  },
+  "telegram": {
+    "step_assigned": "🟡 Нова задача: {step}\n{number} · {type}\nТермін: {due}\n{url}",
+    "step_overdue": "🔴 Прострочено: {step}\n{number} · {type}\nТермін був: {due}\n{url}",
+    "request_done": "✅ Заявку завершено: {number} · {type}\n{url}",
+    "request_rejected": "⛔ Заявку відхилено: {number} · {type}\n{comment}\n{url}",
+    "linked": "Готово! Сповіщення People OS тепер приходитимуть сюди. Щоб вимкнути — надішліть /stop.",
+    "unlinked": "Сповіщення People OS вимкнено для цього чату.",
+    "badCode": "Код недійсний або прострочений. Згенеруйте новий у профілі People OS.",
+    "help": "Це бот People OS. Щоб підключити сповіщення: профіль у People OS → «Сповіщення» → «Підключити Telegram»."
+  },
+  "notifications": {
+    "title": "Сповіщення",
+    "empty": "Сповіщень немає",
+    "markAll": "Позначити всі прочитаними",
+    "bell": "Сповіщення: непрочитаних {n}",
+    "types": {
+      "step_assigned": "Нова задача",
+      "step_overdue": "Прострочений крок",
+      "request_done": "Заявку завершено",
+      "request_rejected": "Заявку відхилено"
+    },
+    "channels": {
+      "in_app": "У застосунку",
+      "telegram": "Telegram"
+    },
+    "settings": "Сповіщення",
+    "telegram": "Telegram",
+    "notConfigured": "Бот ще не налаштований адміністратором (немає TELEGRAM_BOT_TOKEN). Сповіщення в застосунку працюють.",
+    "linked": "Telegram підключено",
+    "notLinked": "Telegram не підключено",
+    "connect": "Підключити Telegram",
+    "disconnect": "Відключити",
+    "openBot": "Відкрити бота",
+    "codeHint": "Відкрийте бота за посиланням або надішліть йому: /start {code} (код дійсний {minutes} хв).",
+    "save": "Зберегти",
+    "type": "Подія"
   }
 }

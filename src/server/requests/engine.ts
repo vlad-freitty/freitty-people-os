@@ -13,6 +13,7 @@ import { onComplete, onStart, type Values } from "./kinds";
 import { checklistSchema, onRejectSchema, optionsSchema, valueSchema, whoCanInitiateSchema } from "./schema";
 import { dueAt } from "./sla";
 import { nextIso, workingDayFn } from "@/server/calendar/core";
+import { notifyEmployee, requestPayload } from "@/server/notifications/notify";
 
 /**
  * Request engine (PRD 4): a request pins a published template version; step groups run one after another,
@@ -266,6 +267,7 @@ async function activateGroup(tx: Tx, actor: Actor | null, r: LoadedRequest, grou
           dueAt: assigneeId ? await computeDue(tx, assigneeId, now, tpl.slaDays) : null,
         },
       });
+      if (step.assigneeId) await notifyEmployee(tx, step.assigneeId, "step_assigned", await requestPayload(tx, r.id, step.id));
       if (step.assigneeId && tpl.stepType === "child_request") await tryAutoStartChild(tx, actor, r, step, tpl, values);
     }
   }
@@ -311,6 +313,7 @@ async function completeRequest(tx: Tx, actor: Actor | null, r: LoadedRequest) {
   const values = await loadValues(tx, r.id);
   await onComplete(tx, actor, { id: r.id, kind: r.version.requestType.kind, subjectEmployeeId: r.subjectEmployeeId, values });
   await tx.request.update({ where: { id: r.id }, data: { status: "done", completedAt: new Date() } });
+  await notifyEmployee(tx, r.initiatorId, "request_done", await requestPayload(tx, r.id));
   await audit(tx, actor, { action: "request.done", entity: "Request", entityId: r.id, departmentId: r.departmentId, employeeId: r.subjectEmployeeId });
   if (r.parentStepId) {
     const parent = await tx.stepInstance.findUniqueOrThrow({ where: { id: r.parentStepId } });
@@ -366,6 +369,7 @@ async function rejectStep(tx: Tx, actor: Actor | null, step: StepInstance & { st
     return;
   }
   await tx.request.update({ where: { id: r.id }, data: { status: "rejected", completedAt: new Date() } });
+  await notifyEmployee(tx, r.initiatorId, "request_rejected", { ...(await requestPayload(tx, r.id)), comment });
   await revertOnStop(tx, actor, r.id);
   if (r.parentStepId) {
     const parent = await tx.stepInstance.findUniqueOrThrow({ where: { id: r.parentStepId }, include: { stepTemplate: true } });
@@ -561,6 +565,7 @@ export async function reassignStep(actor: Actor, stepId: string, assigneeId: str
       where: { id: stepId },
       data: { assigneeId, status: "active", dueAt: await computeDue(tx, assigneeId, activatedAt, step.stepTemplate.slaDays) },
     });
+    await notifyEmployee(tx, assigneeId, "step_assigned", await requestPayload(tx, step.requestId, stepId));
     await audit(tx, actor, {
       action: "step.reassign",
       entity: "StepInstance",

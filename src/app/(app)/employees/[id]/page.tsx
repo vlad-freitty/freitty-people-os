@@ -8,6 +8,8 @@ import { getActor } from "@/server/auth/session";
 import { can, scopeOf } from "@/server/authz/policy";
 import { getBalance } from "@/server/services/absences";
 import { listPayments } from "@/server/services/payments";
+import { getNotificationSettings } from "@/server/services/notifications";
+import { NotificationSettings } from "@/components/notification-settings";
 import { PaymentsTable } from "@/components/money/payments-board";
 import { BalanceAdjustForm, CancelAbsenceButton } from "@/components/balance-actions";
 import { NotFoundError } from "@/server/errors";
@@ -38,6 +40,8 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
       : await Promise.all([listGrants(actor, e.id), listEmployeeAssets(actor, e.id), e.access === "sensitive" ? listDocuments(actor, e.id) : []]);
   const balance = e.access === "basic" ? null : await getBalance(actor, e.id);
   const payments = e.access === "sensitive" ? await listPayments(actor, { employeeId: e.id }) : [];
+  // channels and the Telegram link are personal: shown on one's own profile only
+  const notificationSettings = e.id === actor.employeeId ? await getNotificationSettings(actor) : null;
   const canAdjust = scopeOf(actor, "balances.adjust") === "all";
   const none = t("common.none");
 
@@ -201,6 +205,12 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
               {canAdjust && <BalanceAdjustForm employeeId={e.id} />}
             </div>
           </div>
+        </Card>
+      )}
+
+      {notificationSettings && (
+        <Card className="mt-6" title={t("notifications.settings")}>
+          <NotificationSettings initial={notificationSettings} />
         </Card>
       )}
 

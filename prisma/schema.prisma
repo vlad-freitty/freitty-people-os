@@ -177,21 +177,28 @@ model Employee {
 }
 
 model User {
-  id            String    @id @default(uuid()) @db.Uuid
+  id                  String         @id @default(uuid()) @db.Uuid
   /// Microsoft Entra ID object id (replaces google_sub from the PRD, see CLAUDE.md)
-  entraOid      String?   @unique
-  email         String    @unique
-  roleId        String    @db.Uuid
-  role          Role      @relation(fields: [roleId], references: [id])
-  isActive      Boolean   @default(true)
-  lastLoginAt   DateTime?
+  entraOid            String?        @unique
+  email               String         @unique
+  roleId              String         @db.Uuid
+  role                Role           @relation(fields: [roleId], references: [id])
+  isActive            Boolean        @default(true)
+  lastLoginAt         DateTime?
   /// technical: secret for the personal ICS subscription (phase 2); rotating it invalidates the old link
-  calendarToken String?   @unique
-  employee      Employee?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  createdById   String?   @db.Uuid
-  deletedAt     DateTime?
+  calendarToken       String?        @unique
+  /// technical: Telegram link (phase 5) — chat id after /start, one-time code while linking
+  telegramChatId      String?        @unique
+  telegramLinkCode    String?        @unique
+  telegramLinkExpires DateTime?
+  /// per type and channel: {step_assigned: {in_app: true, telegram: false}, …}; missing = enabled
+  notificationPrefs   Json?
+  notifications       Notification[]
+  employee            Employee?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  createdById         String?        @db.Uuid
+  deletedAt           DateTime?
 
   @@map("app_user")
 }
@@ -605,30 +612,32 @@ model RequestFieldValue {
 }
 
 model StepInstance {
-  id             String       @id @default(uuid()) @db.Uuid
-  requestId      String       @db.Uuid
-  request        Request      @relation("RequestSteps", fields: [requestId], references: [id], onDelete: Cascade)
-  stepTemplateId String       @db.Uuid
-  stepTemplate   StepTemplate @relation(fields: [stepTemplateId], references: [id])
-  orderGroup     Int
+  id                String       @id @default(uuid()) @db.Uuid
+  requestId         String       @db.Uuid
+  request           Request      @relation("RequestSteps", fields: [requestId], references: [id], onDelete: Cascade)
+  stepTemplateId    String       @db.Uuid
+  stepTemplate      StepTemplate @relation(fields: [stepTemplateId], references: [id])
+  orderGroup        Int
   /// system_owner steps are expanded one per system
-  systemId       String?      @db.Uuid
-  system         System?      @relation(fields: [systemId], references: [id])
-  assigneeId     String?      @db.Uuid
-  assignee       Employee?    @relation("StepAssignee", fields: [assigneeId], references: [id])
-  status         StepStatus   @default(waiting)
-  activatedAt    DateTime?
-  dueAt          DateTime?
-  completedAt    DateTime?
-  completedById  String?      @db.Uuid
-  comment        String?
+  systemId          String?      @db.Uuid
+  system            System?      @relation(fields: [systemId], references: [id])
+  assigneeId        String?      @db.Uuid
+  assignee          Employee?    @relation("StepAssignee", fields: [assigneeId], references: [id])
+  status            StepStatus   @default(waiting)
+  activatedAt       DateTime?
+  dueAt             DateTime?
+  completedAt       DateTime?
+  completedById     String?      @db.Uuid
+  comment           String?
   /// task: indexes of checked checklist items
-  checklistState Json?
+  checklistState    Json?
+  /// technical: an overdue notice is sent once per step (phase 5)
+  overdueNotifiedAt DateTime?
   /// document ids attached to this step
-  attachments    String[]
-  childRequest   Request?     @relation("ChildRequest")
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  attachments       String[]
+  childRequest      Request?     @relation("ChildRequest")
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   @@index([requestId])
   @@index([assigneeId, status])
@@ -1043,4 +1052,38 @@ model Bonus {
 
   @@index([employeeId, status])
   @@map("bonus")
+}
+
+// ───────────── Phase 5: notifications (PRD 3, 8) ─────────────
+
+enum NotificationChannel {
+  in_app
+  telegram
+}
+
+enum NotificationType {
+  step_assigned
+  step_overdue
+  request_done
+  request_rejected
+}
+
+model Notification {
+  id          String              @id @default(uuid()) @db.Uuid
+  recipientId String              @db.Uuid
+  recipient   User                @relation(fields: [recipientId], references: [id])
+  type        NotificationType
+  payload     Json
+  channel     NotificationChannel
+  readAt      DateTime?
+  /// technical: delivery bookkeeping for external channels
+  sentAt      DateTime?
+  failedAt    DateTime?
+  attempts    Int                 @default(0)
+  error       String?
+  createdAt   DateTime            @default(now())
+
+  @@index([recipientId, channel, readAt])
+  @@index([channel, sentAt, failedAt])
+  @@map("notification")
 }
