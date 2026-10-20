@@ -1,16 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
-import { DEFAULT_ROLE_PERMISSIONS, SUPERADMIN_ROLE } from "@/server/authz/permissions";
-
-const SYSTEM_ROLES = [
-  { code: SUPERADMIN_ROLE, nameUk: "Суперадмін", nameEn: "Superadmin" },
-  { code: "ceo", nameUk: "CEO", nameEn: "CEO" },
-  { code: "dept_head", nameUk: "Керівник відділу", nameEn: "Department head" },
-  { code: "user", nameUk: "Користувач", nameEn: "User" },
-];
+import { DEFAULT_ROLE_PERMISSIONS, SYSTEM_ROLES } from "@/server/authz/permissions";
 
 /**
- * Creates the four system roles if missing. Permissions are written only for newly created roles,
- * so changes the superadmin made in the UI are never overwritten by a re-seed or a deploy.
+ * Creates missing system roles (tests and fresh dev databases). Permissions are written only for newly created
+ * roles, so changes the superadmin made in the UI are never overwritten. Production databases get the same roles
+ * from the SQL data migrations.
  */
 export async function ensureSystemRoles(prisma: PrismaClient) {
   for (const r of SYSTEM_ROLES) {

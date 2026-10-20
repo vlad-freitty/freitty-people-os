@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addMonths, isIsoDate, parseIsoDate, toMonthDay } from "@/lib/dates";
 import { planRateAppend, rateAt } from "@/server/rates";
+import { dueAt, mondayToFriday } from "@/server/requests/sla";
 
 const d = parseIsoDate;
 
@@ -44,5 +45,34 @@ describe("rate history", () => {
     expect(planRateAppend(rates, d("2025-06-15")).ok).toBe(false);
     expect(planRateAppend(rates, d("2025-03-01")).ok).toBe(false);
     expect(planRateAppend([], d("2025-03-01"))).toEqual({ ok: true, close: null });
+  });
+});
+
+describe("SLA in working days", () => {
+  const iso = (d: Date) => d.toISOString();
+
+  it("skips the weekend: Friday + 1 working day = end of Monday (Kyiv)", () => {
+    // Fri 2026-10-16 10:00 UTC; Kyiv is UTC+3 until Oct 25
+    expect(iso(dueAt(new Date("2026-10-16T10:00:00Z"), 1, "Europe/Kyiv"))).toBe("2026-10-19T20:59:59.000Z");
+  });
+
+  it("handles the DST switch (Kyiv moves to UTC+2 on 2026-10-25)", () => {
+    expect(iso(dueAt(new Date("2026-10-23T10:00:00Z"), 1, "Europe/Kyiv"))).toBe("2026-10-26T21:59:59.000Z");
+  });
+
+  it("counts days in the assignee's zone: late Friday in Ohio is still Friday there", () => {
+    // 2026-10-17 02:00 UTC = Fri 22:00 in Ohio (UTC-4) → +1 working day = Monday in Ohio
+    expect(iso(dueAt(new Date("2026-10-17T02:00:00Z"), 1, "America/New_York"))).toBe("2026-10-20T03:59:59.000Z");
+    // the same instant is already Saturday in Kyiv → the first working day after it is Monday
+    expect(iso(dueAt(new Date("2026-10-17T02:00:00Z"), 1, "Europe/Kyiv"))).toBe("2026-10-19T20:59:59.000Z");
+  });
+
+  it("SLA 0 activated on a day off is due at the end of the next working day", () => {
+    expect(iso(dueAt(new Date("2026-10-17T10:00:00Z"), 0, "UTC"))).toBe("2026-10-19T23:59:59.000Z");
+  });
+
+  it("accepts a custom working-day function (phase 2 calendars)", () => {
+    const holidayMonday = (d: string) => mondayToFriday(d) && d !== "2026-10-19";
+    expect(iso(dueAt(new Date("2026-10-16T10:00:00Z"), 1, "UTC", holidayMonday))).toBe("2026-10-20T23:59:59.000Z");
   });
 });

@@ -3,7 +3,11 @@ import { loadActor } from "@/server/authz/actor";
 import { prisma } from "@/server/db";
 import { ensureSystemRoles } from "@/server/seed/roles";
 
-const TABLES = ["audit_log", "rate_history", "department_head", "employee", "app_user", "role_permission", "role", "department", "location", "company"];
+const TABLES = [
+  "comment", "step_instance", "request_field_value", "access_grant", "document", "request", "step_template", "form_field",
+  "request_type_version", "request_type", "asset", "access_bundle_item", "access_bundle", "system",
+  "audit_log", "rate_history", "department_head", "employee", "app_user", "role_permission", "role", "department", "location", "company",
+];
 
 /** Empties the test database. Refuses to run against anything that is not a *_test database. */
 export async function resetDb() {

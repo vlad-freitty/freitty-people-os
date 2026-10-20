@@ -26,7 +26,12 @@
     "org": "Org structure",
     "roles": "Roles & permissions",
     "import": "Import",
-    "audit": "Audit log"
+    "audit": "Audit log",
+    "tasks": "My tasks",
+    "requests": "Requests",
+    "templates": "Templates",
+    "systems": "Systems",
+    "assets": "Equipment"
   },
   "login": {
     "title": "Sign in to People OS",
@@ -47,8 +52,7 @@
     "headcount": "Employees",
     "departments": "Departments",
     "companies": "Companies",
-    "myProfile": "My profile",
-    "phaseNote": "Dashboards with tasks, time off and payments arrive in the next phases."
+    "myProfile": "My profile"
   },
   "employees": {
     "title": "People",
@@ -200,10 +204,17 @@
       "publish": "Publish templates"
     },
     "requests": {
-      "initiate": "Start requests"
+      "initiate": "Start requests",
+      "view": "See requests"
     },
     "steps": {
       "reassign": "Reassign stuck steps"
+    },
+    "systems": {
+      "manage": "Systems & access templates"
+    },
+    "assets": {
+      "manage": "Equipment & licenses"
     }
   },
   "import": {
@@ -253,5 +264,246 @@
     "conflict": "Conflict: the record already exists or the action is not allowed.",
     "unauthorized": "Your session has ended, please sign in again.",
     "internal_error": "Server error. Please try again later."
+  },
+  "tasks": {
+    "title": "My tasks",
+    "empty": "No active tasks",
+    "due": "Due",
+    "overdue": "overdue",
+    "open": "Open"
+  },
+  "requests": {
+    "title": "Requests",
+    "new": "New request",
+    "chooseType": "Choose a request type",
+    "noTypes": "There are no request types you can start",
+    "submit": "Create request",
+    "filterAll": "All visible",
+    "filterInitiated": "Created by me",
+    "filterAboutMe": "About me",
+    "number": "Number",
+    "type": "Type",
+    "subject": "Employee",
+    "initiator": "Initiator",
+    "department": "Department",
+    "createdAt": "Created",
+    "completedAt": "Completed",
+    "fields": "Request data",
+    "steps": "Steps",
+    "group": "Stage {n}",
+    "comments": "Comments",
+    "addComment": "Write a comment",
+    "send": "Send",
+    "cancel": "Cancel request",
+    "cancelConfirm": "Cancel this request? Open steps will be closed.",
+    "parent": "Parent request",
+    "child": "Child request",
+    "overdue": "has overdue steps",
+    "needsAssignment": "needs assignment",
+    "version": "template version {v}",
+    "empty": "No requests",
+    "status": {
+      "draft": "Draft",
+      "in_progress": "In progress",
+      "done": "Done",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    }
+  },
+  "step": {
+    "status": {
+      "waiting": "Waiting",
+      "active": "Active",
+      "needs_assignment": "Needs assignment",
+      "done": "Done",
+      "rejected": "Rejected",
+      "skipped": "Skipped"
+    },
+    "type": {
+      "approve": "Approval",
+      "task": "Task",
+      "fill": "Fill in fields",
+      "document": "Document",
+      "child_request": "Child request"
+    },
+    "assignee": "Assignee",
+    "due": "Due",
+    "yourStep": "Your step",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectHint": "A comment is required to reject",
+    "comment": "Comment",
+    "complete": "Done",
+    "checklistHint": "The step closes once every item is ticked",
+    "fillSubmit": "Save and close the step",
+    "upload": "Upload and close the step",
+    "validTo": "Valid until (optional)",
+    "startChild": "Start the child request",
+    "childAuto": "The child request was created automatically",
+    "reassign": "Reassign",
+    "noAssignee": "not assigned",
+    "system": "System",
+    "file": "File"
+  },
+  "fieldType": {
+    "text": "Text",
+    "textarea": "Long text",
+    "number": "Number",
+    "date": "Date",
+    "date_range": "Date range",
+    "select": "Single choice",
+    "multiselect": "Multiple choice",
+    "person": "Employee",
+    "file": "File",
+    "systems": "Systems & access"
+  },
+  "rule": {
+    "person": "Specific person",
+    "initiator": "Request initiator",
+    "initiator_dept_head": "Head of initiator's department",
+    "subject_dept_head": "Head of employee's department",
+    "system_owner": "System owner (one step per system)",
+    "role_first_free": "First free person with role"
+  },
+  "templates": {
+    "title": "Request templates",
+    "new": "New template",
+    "code": "Code",
+    "nameUk": "Name (UA)",
+    "nameEn": "Name (EN)",
+    "kind": "Process kind",
+    "kinds": {
+      "generic": "Generic",
+      "hiring": "Hiring",
+      "onboarding": "Onboarding",
+      "access": "Access",
+      "offboarding": "Offboarding",
+      "absence": "Absence (phase 2)",
+      "bonus": "Bonus (phase 3)"
+    },
+    "department": "Department",
+    "global": "Global",
+    "who": "Who can start",
+    "whoModes": {
+      "all": "Everyone",
+      "departments": "Departments",
+      "roles": "Roles"
+    },
+    "version": "Version",
+    "editing": "Editing version {v} ({status})",
+    "versionStatus": {
+      "draft": "draft",
+      "published": "published",
+      "archived": "archived"
+    },
+    "fields": "Form fields",
+    "addField": "Add field",
+    "key": "Key",
+    "label": "Label",
+    "labelEn": "Label (EN)",
+    "type": "Type",
+    "required": "Required",
+    "options": "Options (one per line)",
+    "optionsDepartments": "List of departments (dynamic)",
+    "groups": "Stages & steps",
+    "groupsHint": "Steps in a stage run in parallel; the next stage starts when every step of the previous one is closed.",
+    "group": "Stage {n}",
+    "addGroup": "Add stage",
+    "addStep": "Add step",
+    "stepName": "Step name",
+    "stepNameEn": "Name (EN)",
+    "stepType": "Step type",
+    "rule": "Who does it",
+    "person": "Person",
+    "role": "Role",
+    "sla": "SLA, working days",
+    "checklist": "Checklist (one item per line)",
+    "requiredFields": "Fields to fill",
+    "onReject": "On rejection",
+    "onRejectClose": "Close the request",
+    "onRejectReturn": "Return to stage",
+    "childType": "Child request type",
+    "documentType": "Document type",
+    "saveDraft": "Save draft",
+    "publish": "Publish",
+    "errors": "Fix before publishing",
+    "noErrors": "The template is ready to publish",
+    "versions": "Version history",
+    "readOnly": "Read only: you cannot edit this template",
+    "moveUp": "Up",
+    "moveDown": "Down",
+    "remove": "Remove",
+    "saved": "Draft saved",
+    "published": "Version {v} published",
+    "hasDraft": "has draft",
+    "notPublished": "not published",
+    "meta": "Settings",
+    "saveMeta": "Save settings"
+  },
+  "systems": {
+    "title": "Systems & access templates",
+    "systems": "Systems",
+    "bundles": "Access templates by position",
+    "name": "Name",
+    "owner": "Owner",
+    "active": "Active",
+    "newSystem": "New system",
+    "newBundle": "New access template",
+    "position": "Position",
+    "level": "Access level",
+    "addItem": "Add system",
+    "bundleHint": "During onboarding the template pre-fills the child access request when the position matches."
+  },
+  "assets": {
+    "title": "Equipment & licenses",
+    "type": {
+      "laptop": "Laptop",
+      "phone": "Phone",
+      "license": "License",
+      "other": "Other"
+    },
+    "kind": "Type",
+    "name": "Name",
+    "serial": "Serial / seat",
+    "cost": "Monthly cost",
+    "currency": "Currency",
+    "assignedTo": "Holder",
+    "assign": "Hand out",
+    "return": "Return",
+    "newAsset": "New item",
+    "licenseTotal": "Licenses per month",
+    "free": "available"
+  },
+  "profile": {
+    "accesses": "Access",
+    "assets": "Equipment",
+    "documents": "Documents",
+    "noAccesses": "No access granted",
+    "noAssets": "No equipment",
+    "noDocuments": "No documents",
+    "uploadDocument": "Upload document",
+    "docType": {
+      "contract": "Contract",
+      "nda": "NDA",
+      "act": "Act",
+      "invoice": "Invoice",
+      "w9": "W-9",
+      "other": "Other"
+    },
+    "validTo": "Valid until",
+    "expired": "expired",
+    "revoked": "revoked",
+    "download": "Download",
+    "level": "Level"
+  },
+  "dashboard2": {
+    "myTasks": "My tasks",
+    "overdue": "Overdue steps",
+    "needsAssignment": "Steps without assignee",
+    "probation": "Probation",
+    "probationDay": "day {days}",
+    "nothing": "Nothing",
+    "licenses": "Licenses per month",
+    "allTasks": "All tasks"
   }
 }

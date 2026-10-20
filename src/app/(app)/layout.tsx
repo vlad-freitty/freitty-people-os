@@ -4,7 +4,7 @@ import { signOut } from "@/auth";
 import { LocaleToggle } from "@/components/locale-toggle";
 import { NavLinks } from "@/components/nav-links";
 import { getActorOrNull } from "@/server/auth/session";
-import { hasPermission } from "@/server/authz/policy";
+import { hasPermission, scopeOf } from "@/server/authz/policy";
 import { getMe } from "@/server/services/me";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -15,8 +15,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const links = [
     { href: "/", label: t("nav.dashboard") },
+    ...(actor.employeeId ? [{ href: "/tasks", label: t("nav.tasks") }, { href: "/requests", label: t("nav.requests") }] : []),
     ...(hasPermission(actor, "directory.view") || hasPermission(actor, "employees.view") ? [{ href: "/employees", label: t("nav.employees") }] : []),
     { href: "/org", label: t("nav.org") },
+    ...(scopeOf(actor, "templates.manage") ? [{ href: "/templates", label: t("nav.templates") }] : []),
+    ...(scopeOf(actor, "systems.manage") === "all" ? [{ href: "/systems", label: t("nav.systems") }] : []),
+    ...(scopeOf(actor, "assets.manage") === "all" ? [{ href: "/assets", label: t("nav.assets") }] : []),
     ...(hasPermission(actor, "roles.manage") || hasPermission(actor, "roles.assign") ? [{ href: "/roles", label: t("nav.roles") }] : []),
     ...(hasPermission(actor, "import.run") ? [{ href: "/import", label: t("nav.import") }] : []),
     ...(hasPermission(actor, "audit.view") ? [{ href: "/audit", label: t("nav.audit") }] : []),

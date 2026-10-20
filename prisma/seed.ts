@@ -1,6 +1,7 @@
 // Fake data only (PRD 9, rule 4): names are invented, emails use the reserved example.test domain.
 import { PrismaClient, type EmploymentType, type RateType } from "@prisma/client";
 import { ensureSystemRoles } from "../src/server/seed/roles";
+import { seedStarterTemplates } from "../src/server/seed/templates";
 
 const prisma = new PrismaClient();
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
@@ -77,8 +78,10 @@ async function main() {
     { email: "sales.olga@example.test", first: "Ольга", last: "Продажна", dept: "Sales", company: "FREITTY", position: "Account Executive", location: "Kyiv", hire: "2023-05-15", rate: [{ type: "monthly", amount: 2200, currency: "USD", from: "2023-05-15" }] },
     { email: "dev.petro@example.test", first: "Петро", last: "Кодович", dept: "Engineering", company: "NETQOR", position: "Backend Developer", location: "Kyiv", hire: "2022-11-01", birth: "1994-04-04", role: "user", rate: [{ type: "monthly", amount: 4200, currency: "USD", from: "2022-11-01" }] },
     { email: "dev.lina@example.test", first: "Ліна", last: "Фронтенко", dept: "Engineering", company: "NETQOR", position: "Frontend Developer", location: "Remote", type: "contractor", hire: "2026-09-01", rate: [{ type: "hourly", amount: 25, currency: "USD", from: "2026-09-01" }] },
-    { email: "fin.nadia@example.test", first: "Надія", last: "Рахункова", dept: "Finance", company: "YBIS", position: "Finance Manager", location: "Kyiv", hire: "2021-02-01", rate: [{ type: "monthly", amount: 3000, currency: "UAH", from: "2021-02-01" }] },
-    { email: "legal.yuri@example.test", first: "Юрій", last: "Законний", dept: "Legal", company: "YBIS", position: "Legal Counsel", location: "Kyiv", hire: "2022-07-01" },
+    { email: "fin.nadia@example.test", first: "Надія", last: "Рахункова", dept: "Finance", company: "YBIS", position: "Finance Manager", location: "Kyiv", hire: "2021-02-01", role: "finance", rate: [{ type: "monthly", amount: 3000, currency: "UAH", from: "2021-02-01" }] },
+    { email: "legal.yuri@example.test", first: "Юрій", last: "Законний", dept: "Legal", company: "YBIS", position: "Legal Counsel", location: "Kyiv", hire: "2022-07-01", role: "legal" },
+    { email: "hr.kateryna@example.test", first: "Катерина", last: "Кадрова", dept: "HR & People", company: "NETQOR", position: "HR Manager", location: "Kyiv", hire: "2023-03-01", role: "hr", rate: [{ type: "monthly", amount: 1800, currency: "USD", from: "2023-03-01" }] },
+    { email: "office.bohdan@example.test", first: "Богдан", last: "Господарський", dept: "Management", company: "FREITTY", position: "Office Administrator", location: "Kyiv", hire: "2022-01-10", role: "office_admin" },
   ];
 
   for (const p of people) {
@@ -131,7 +134,63 @@ async function main() {
     });
   }
 
-  console.log(`Seeded: ${people.length} employees, ${Object.keys(departments).length} departments.`);
+  // a new hire waiting for onboarding (no login yet)
+  await prisma.employee.upsert({
+    where: { workEmail: "new.anna@example.test" },
+    update: {},
+    create: {
+      firstName: "Анна",
+      lastName: "Новенька",
+      workEmail: "new.anna@example.test",
+      companyId: companies.FREITTY,
+      departmentId: departments["Customer Success"],
+      locationId: locations.Kyiv,
+      position: "CS Agent",
+      employmentType: "employee",
+      status: "onboarding",
+    },
+  });
+
+  // Phase 1: systems (owners are placeholders until the real list is agreed), access bundles, assets, starter templates
+  const owner = async (email: string) => (await prisma.employee.findUniqueOrThrow({ where: { workEmail: email } })).id;
+  const systems: Record<string, string> = {};
+  for (const [name, ownerEmail] of [
+    ["Freitty Hub", "eng.head@example.test"],
+    ["HubSpot", "cs.head@example.test"],
+    ["Dialpad", "cs.head@example.test"],
+    ["ClickUp", "eng.head@example.test"],
+    ["Google Workspace", "superadmin@example.test"],
+  ] as const) {
+    const s = await prisma.system.upsert({ where: { name }, update: {}, create: { name, ownerEmployeeId: await owner(ownerEmail) } });
+    systems[name] = s.id;
+  }
+  const bundles: [string, string, [string, string][]][] = [
+    ["CS agent", "CS Agent", [["Freitty Hub", "agent"], ["HubSpot", "user"], ["Dialpad", "agent"], ["Google Workspace", "user"]]],
+    ["Backend developer", "Backend Developer", [["Freitty Hub", "admin"], ["ClickUp", "member"], ["Google Workspace", "user"]]],
+  ];
+  for (const [name, positionOrRole, items] of bundles) {
+    if (await prisma.accessBundle.findUnique({ where: { name } })) continue;
+    await prisma.accessBundle.create({
+      data: { name, positionOrRole, items: { create: items.map(([sys, accessLevel]) => ({ systemId: systems[sys], accessLevel })) } },
+    });
+  }
+  if ((await prisma.asset.count()) === 0) {
+    const petro = await owner("dev.petro@example.test");
+    const ivanna = await owner("agent.ivanna@example.test");
+    await prisma.asset.createMany({
+      data: [
+        { type: "laptop", name: "MacBook Air 13", serialOrSeat: "FAKE-SN-001", assignedToId: petro, assignedAt: d("2022-11-01") },
+        { type: "laptop", name: "Lenovo ThinkPad E14", serialOrSeat: "FAKE-SN-002", assignedToId: ivanna, assignedAt: d("2024-02-01") },
+        { type: "laptop", name: "Lenovo ThinkPad E14", serialOrSeat: "FAKE-SN-003" },
+        { type: "license", name: "HubSpot Sales seat", serialOrSeat: "seat-1", monthlyCost: 90, currency: "USD", assignedToId: ivanna, assignedAt: d("2024-02-01") },
+        { type: "license", name: "Dialpad seat", serialOrSeat: "seat-1", monthlyCost: 27, currency: "USD", assignedToId: ivanna, assignedAt: d("2024-02-01") },
+        { type: "license", name: "ClickUp seat", serialOrSeat: "seat-1", monthlyCost: 12, currency: "USD", assignedToId: petro, assignedAt: d("2022-11-01") },
+      ],
+    });
+  }
+  await seedStarterTemplates(prisma);
+
+  console.log(`Seeded: ${people.length + 1} employees, ${Object.keys(departments).length} departments, ${Object.keys(systems).length} systems, starter templates.`);
 }
 
 main()

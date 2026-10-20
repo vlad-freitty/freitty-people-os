@@ -46,3 +46,6 @@ next-env.d.ts
 .env.local
 /test-results/
 !.env.example
+
+# private file storage (dev)
+.uploads/

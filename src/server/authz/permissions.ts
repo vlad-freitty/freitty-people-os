@@ -19,10 +19,13 @@ export const PERMISSIONS = {
   "import.run": { scopes: ["all"], group: "admin" },
   "settings.manage": { scopes: ["all"], group: "admin" },
   "audit.view": { scopes: ["all", "departments", "self"], group: "admin" },
-  // Phase 1 (request engine) — present in the catalog so roles can be prepared upfront
+  "systems.manage": { scopes: ["all"], group: "admin" },
+  "assets.manage": { scopes: ["all"], group: "admin" },
   "templates.manage": { scopes: ["all", "departments"], group: "requests" },
   "templates.publish": { scopes: ["all", "departments"], group: "requests" },
   "requests.initiate": { scopes: ["all"], group: "requests" },
+  /** self = requests I started, that are about me, or where I have a step */
+  "requests.view": { scopes: ["all", "departments", "self"], group: "requests" },
   "steps.reassign": { scopes: ["all", "departments"], group: "requests" },
 } as const satisfies Record<string, { scopes: readonly PermissionScope[]; group: string }>;
 
@@ -40,7 +43,21 @@ export function isScopeAllowed(permission: Permission, scope: PermissionScope): 
 
 export const SUPERADMIN_ROLE = "superadmin";
 
-/** Default permissions for the system roles, used by the seed. Matches PRD section 2, with CEO = all rights. */
+const USER_PERMISSIONS: Partial<Record<Permission, PermissionScope>> = {
+  "directory.view": "all",
+  "employees.view": "self",
+  "employees.view_sensitive": "self",
+  "audit.view": "self",
+  "requests.initiate": "all",
+  "requests.view": "self",
+};
+
+/**
+ * Default permissions for the system roles. Matches PRD section 2, with CEO = all rights.
+ * hr / legal / finance / office_admin are assignment groups for the role_first_free rule (phase 1 plan, decision 2):
+ * same rights as a user, the superadmin extends them as needed.
+ * Existing databases get these through the SQL data migration; keep both in sync.
+ */
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, Partial<Record<Permission, PermissionScope>>> = {
   ceo: Object.fromEntries(PERMISSION_KEYS.map((p) => [p, "all"])),
   dept_head: {
@@ -53,13 +70,23 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Partial<Record<Permission,
     "templates.manage": "departments",
     "templates.publish": "departments",
     "requests.initiate": "all",
+    "requests.view": "departments",
     "steps.reassign": "departments",
   },
-  user: {
-    "directory.view": "all",
-    "employees.view": "self",
-    "employees.view_sensitive": "self",
-    "audit.view": "self",
-    "requests.initiate": "all",
-  },
+  user: USER_PERMISSIONS,
+  hr: USER_PERMISSIONS,
+  legal: USER_PERMISSIONS,
+  finance: USER_PERMISSIONS,
+  office_admin: USER_PERMISSIONS,
 };
+
+export const SYSTEM_ROLES = [
+  { code: SUPERADMIN_ROLE, nameUk: "Суперадмін", nameEn: "Superadmin" },
+  { code: "ceo", nameUk: "CEO", nameEn: "CEO" },
+  { code: "dept_head", nameUk: "Керівник відділу", nameEn: "Department head" },
+  { code: "user", nameUk: "Користувач", nameEn: "User" },
+  { code: "hr", nameUk: "HR", nameEn: "HR" },
+  { code: "legal", nameUk: "Legal", nameEn: "Legal" },
+  { code: "finance", nameUk: "Фінанси", nameEn: "Finance" },
+  { code: "office_admin", nameUk: "Адміністратор офісу", nameEn: "Office admin" },
+];

@@ -59,19 +59,21 @@ model Company {
 }
 
 model Department {
-  id          String           @id @default(uuid()) @db.Uuid
-  companyId   String           @db.Uuid
-  company     Company          @relation(fields: [companyId], references: [id])
-  name        String
-  parentId    String?          @db.Uuid
-  parent      Department?      @relation("DepartmentTree", fields: [parentId], references: [id])
-  children    Department[]     @relation("DepartmentTree")
-  heads       DepartmentHead[]
-  employees   Employee[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  createdById String?          @db.Uuid
-  deletedAt   DateTime?
+  id           String           @id @default(uuid()) @db.Uuid
+  companyId    String           @db.Uuid
+  company      Company          @relation(fields: [companyId], references: [id])
+  name         String
+  parentId     String?          @db.Uuid
+  parent       Department?      @relation("DepartmentTree", fields: [parentId], references: [id])
+  children     Department[]     @relation("DepartmentTree")
+  heads        DepartmentHead[]
+  employees    Employee[]
+  requestTypes RequestType[]
+  requests     Request[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  createdById  String?          @db.Uuid
+  deletedAt    DateTime?
 
   @@unique([companyId, name])
   @@map("department")
@@ -136,6 +138,14 @@ model Employee {
   locale          Locale           @default(uk)
   rates           RateHistory[]
   headOf          DepartmentHead[]
+  accessGrants    AccessGrant[]
+  assets          Asset[]
+  documents       Document[]
+  ownedSystems    System[]
+  initiated       Request[]        @relation("RequestInitiator")
+  subjectOf       Request[]        @relation("RequestSubject")
+  assignedSteps   StepInstance[]   @relation("StepAssignee")
+  comments        Comment[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   createdById     String?          @db.Uuid
@@ -233,4 +243,383 @@ model AuditLog {
   @@index([departmentId])
   @@index([entity, entityId])
   @@map("audit_log")
+}
+
+// ───────────── Phase 1: accesses, assets, documents (PRD 3) ─────────────
+
+enum AssetType {
+  laptop
+  phone
+  license
+  other
+}
+
+enum DocumentType {
+  contract
+  nda
+  act
+  invoice
+  w9
+  other
+}
+
+enum DocumentStatus {
+  active
+  expired
+  archived
+}
+
+model System {
+  id              String             @id @default(uuid()) @db.Uuid
+  name            String             @unique
+  ownerEmployeeId String?            @db.Uuid
+  owner           Employee?          @relation(fields: [ownerEmployeeId], references: [id])
+  isActive        Boolean            @default(true)
+  bundleItems     AccessBundleItem[]
+  grants          AccessGrant[]
+  steps           StepInstance[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  createdById     String?            @db.Uuid
+  deletedAt       DateTime?
+
+  @@map("system")
+}
+
+model AccessBundle {
+  id             String             @id @default(uuid()) @db.Uuid
+  name           String             @unique
+  /// matched against Employee.position (case-insensitive) to pre-fill access requests
+  positionOrRole String
+  items          AccessBundleItem[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  createdById    String?            @db.Uuid
+  deletedAt      DateTime?
+
+  @@map("access_bundle")
+}
+
+model AccessBundleItem {
+  bundleId    String       @db.Uuid
+  bundle      AccessBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  systemId    String       @db.Uuid
+  system      System       @relation(fields: [systemId], references: [id])
+  accessLevel String
+
+  @@id([bundleId, systemId])
+  @@map("access_bundle_item")
+}
+
+/// One active grant per (employee, system) — enforced by a partial unique index in the migration.
+model AccessGrant {
+  id          String    @id @default(uuid()) @db.Uuid
+  employeeId  String    @db.Uuid
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  systemId    String    @db.Uuid
+  system      System    @relation(fields: [systemId], references: [id])
+  accessLevel String
+  grantedAt   DateTime  @default(now())
+  revokedAt   DateTime?
+  requestId   String?   @db.Uuid
+  request     Request?  @relation(fields: [requestId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?   @db.Uuid
+
+  @@index([employeeId])
+  @@map("access_grant")
+}
+
+model Asset {
+  id           String    @id @default(uuid()) @db.Uuid
+  type         AssetType
+  name         String
+  serialOrSeat String?
+  monthlyCost  Decimal?  @db.Decimal(12, 2)
+  /// technical: needed to sum license costs per currency
+  currency     String?   @db.Char(3)
+  assignedToId String?   @db.Uuid
+  assignedTo   Employee? @relation(fields: [assignedToId], references: [id])
+  assignedAt   DateTime?
+  returnedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  createdById  String?   @db.Uuid
+  deletedAt    DateTime?
+
+  @@index([assignedToId])
+  @@map("asset")
+}
+
+model Document {
+  id          String         @id @default(uuid()) @db.Uuid
+  employeeId  String         @db.Uuid
+  employee    Employee       @relation(fields: [employeeId], references: [id])
+  type        DocumentType
+  /// storage key; files live in private storage and are served via short-lived links
+  fileKey     String
+  fileName    String
+  mimeType    String
+  size        Int
+  period      String?
+  validFrom   DateTime?      @db.Date
+  validTo     DateTime?      @db.Date
+  status      DocumentStatus @default(active)
+  requestId   String?        @db.Uuid
+  request     Request?       @relation(fields: [requestId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  createdById String?        @db.Uuid
+  deletedAt   DateTime?
+
+  @@index([employeeId])
+  @@map("document")
+}
+
+// ───────────── Phase 1: request engine (PRD 4) ─────────────
+
+enum RequestKind {
+  generic
+  hiring
+  onboarding
+  access
+  offboarding
+  absence
+  bonus
+}
+
+enum VersionStatus {
+  draft
+  published
+  archived
+}
+
+enum FieldType {
+  text
+  textarea
+  number
+  date
+  date_range
+  select
+  multiselect
+  person
+  file
+  /// systems with an access level each — approved addition (phase 1 plan, decision 3)
+  systems
+}
+
+enum StepType {
+  approve
+  task
+  fill
+  document
+  child_request
+}
+
+enum AssigneeRule {
+  person
+  /// technical: needed by the ARM seed template ("підтвердження ініціатором")
+  initiator
+  initiator_dept_head
+  subject_dept_head
+  system_owner
+  role_first_free
+}
+
+enum RequestStatus {
+  draft
+  in_progress
+  done
+  rejected
+  cancelled
+}
+
+enum StepStatus {
+  waiting
+  active
+  needs_assignment
+  done
+  rejected
+  skipped
+}
+
+model RequestType {
+  id               String               @id @default(uuid()) @db.Uuid
+  code             String               @unique
+  nameUk           String
+  nameEn           String?
+  kind             RequestKind
+  /// null = global template
+  departmentId     String?              @db.Uuid
+  department       Department?          @relation(fields: [departmentId], references: [id])
+  /// {mode: "all" | "departments" | "roles", departmentIds?: string[], roleCodes?: string[]}
+  whoCanInitiate   Json
+  currentVersionId String?              @unique @db.Uuid
+  currentVersion   RequestTypeVersion?  @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  versions         RequestTypeVersion[] @relation("TypeVersions")
+  childOfSteps     StepTemplate[]       @relation("ChildRequestType")
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  createdById      String?              @db.Uuid
+  deletedAt        DateTime?
+
+  @@map("request_type")
+}
+
+/// A published version is immutable; requests pin the version they were created with.
+model RequestTypeVersion {
+  id            String         @id @default(uuid()) @db.Uuid
+  requestTypeId String         @db.Uuid
+  requestType   RequestType    @relation("TypeVersions", fields: [requestTypeId], references: [id])
+  currentOf     RequestType?   @relation("CurrentVersion")
+  version       Int
+  status        VersionStatus  @default(draft)
+  publishedById String?        @db.Uuid
+  publishedAt   DateTime?
+  fields        FormField[]
+  steps         StepTemplate[]
+  requests      Request[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  createdById   String?        @db.Uuid
+
+  @@unique([requestTypeId, version])
+  @@map("request_type_version")
+}
+
+model FormField {
+  id        String             @id @default(uuid()) @db.Uuid
+  versionId String             @db.Uuid
+  version   RequestTypeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  key       String
+  labelUk   String
+  labelEn   String?
+  type      FieldType
+  /// select / multiselect: [{value, labelUk, labelEn?}]
+  options   Json?
+  required  Boolean            @default(false)
+  order     Int
+
+  @@unique([versionId, key])
+  @@map("form_field")
+}
+
+model StepTemplate {
+  id                 String             @id @default(uuid()) @db.Uuid
+  versionId          String             @db.Uuid
+  version            RequestTypeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  orderGroup         Int
+  /// technical: position of the step inside its group, as arranged in the constructor
+  order              Int                @default(0)
+  nameUk             String
+  nameEn             String?
+  stepType           StepType
+  assigneeRule       AssigneeRule
+  /// person: employee id; role_first_free: role code
+  assigneeValue      String?
+  slaDays            Int
+  /// task: [{labelUk, labelEn?}]
+  checklist          Json?
+  /// fill: form field keys the assignee must fill
+  requiredFields     String[]
+  /// {action: "close" | "return", group?: number}
+  onReject           Json
+  /// child_request: which request type to start
+  childRequestTypeId String?            @db.Uuid
+  childRequestType   RequestType?       @relation("ChildRequestType", fields: [childRequestTypeId], references: [id])
+  /// document: type of the Document created from the uploaded file
+  documentType       DocumentType?
+  instances          StepInstance[]
+
+  @@index([versionId])
+  @@map("step_template")
+}
+
+model Request {
+  id                   String              @id @default(uuid()) @db.Uuid
+  /// human-readable number, REQ-0001
+  number               Int                 @unique @default(autoincrement())
+  requestTypeVersionId String              @db.Uuid
+  version              RequestTypeVersion  @relation(fields: [requestTypeVersionId], references: [id])
+  initiatorId          String              @db.Uuid
+  initiator            Employee            @relation("RequestInitiator", fields: [initiatorId], references: [id])
+  subjectEmployeeId    String?             @db.Uuid
+  subject              Employee?           @relation("RequestSubject", fields: [subjectEmployeeId], references: [id])
+  status               RequestStatus       @default(draft)
+  currentGroup         Int                 @default(0)
+  /// department the request belongs to for scoped access: subject's department, else initiator's
+  departmentId         String              @db.Uuid
+  department           Department          @relation(fields: [departmentId], references: [id])
+  /// set on child requests: the parent step waiting for this one
+  parentStepId         String?             @unique @db.Uuid
+  parentStep           StepInstance?       @relation("ChildRequest", fields: [parentStepId], references: [id])
+  completedAt          DateTime?
+  values               RequestFieldValue[]
+  steps                StepInstance[]      @relation("RequestSteps")
+  comments             Comment[]
+  grants               AccessGrant[]
+  documents            Document[]
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  createdById          String?             @db.Uuid
+
+  @@index([initiatorId])
+  @@index([subjectEmployeeId])
+  @@index([departmentId])
+  @@map("request")
+}
+
+model RequestFieldValue {
+  requestId String  @db.Uuid
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fieldKey  String
+  value     Json
+
+  @@id([requestId, fieldKey])
+  @@map("request_field_value")
+}
+
+model StepInstance {
+  id             String       @id @default(uuid()) @db.Uuid
+  requestId      String       @db.Uuid
+  request        Request      @relation("RequestSteps", fields: [requestId], references: [id], onDelete: Cascade)
+  stepTemplateId String       @db.Uuid
+  stepTemplate   StepTemplate @relation(fields: [stepTemplateId], references: [id])
+  orderGroup     Int
+  /// system_owner steps are expanded one per system
+  systemId       String?      @db.Uuid
+  system         System?      @relation(fields: [systemId], references: [id])
+  assigneeId     String?      @db.Uuid
+  assignee       Employee?    @relation("StepAssignee", fields: [assigneeId], references: [id])
+  status         StepStatus   @default(waiting)
+  activatedAt    DateTime?
+  dueAt          DateTime?
+  completedAt    DateTime?
+  completedById  String?      @db.Uuid
+  comment        String?
+  /// task: indexes of checked checklist items
+  checklistState Json?
+  /// document ids attached to this step
+  attachments    String[]
+  childRequest   Request?     @relation("ChildRequest")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([requestId])
+  @@index([assigneeId, status])
+  @@map("step_instance")
+}
+
+model Comment {
+  id        String   @id @default(uuid()) @db.Uuid
+  requestId String   @db.Uuid
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorId  String   @db.Uuid
+  author    Employee @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([requestId])
+  @@map("comment")
 }

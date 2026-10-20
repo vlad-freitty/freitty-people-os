@@ -46,3 +46,14 @@ export async function readJson(req: Request): Promise<unknown> {
 export function searchParams(req: Request): Record<string, string> {
   return Object.fromEntries(new URL(req.url).searchParams.entries());
 }
+
+/** multipart/form-data: the "file" part plus all text fields. */
+export async function readUpload(req: Request) {
+  const form = await req.formData();
+  const part = form.get("file");
+  const file =
+    part && typeof part !== "string" ? { name: part.name || "file", type: part.type, data: Buffer.from(await part.arrayBuffer()) } : null;
+  const fields: Record<string, string> = {};
+  for (const [k, v] of form.entries()) if (typeof v === "string") fields[k] = v;
+  return { file, fields };
+}

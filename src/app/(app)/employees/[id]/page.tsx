@@ -8,6 +8,12 @@ import { getActor } from "@/server/auth/session";
 import { can } from "@/server/authz/policy";
 import { NotFoundError } from "@/server/errors";
 import { getEmployee, listRates } from "@/server/services/employees";
+import { listEmployeeAssets } from "@/server/services/assets";
+import { listDocuments } from "@/server/services/documents";
+import { requestNumber } from "@/server/services/requests";
+import { listGrants } from "@/server/services/systems";
+import Link from "next/link";
+import { DocumentUpload } from "@/components/directories";
 
 export default async function EmployeePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -22,6 +28,10 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
   const canEdit = can(actor, "employees.edit", target);
   const canEditRates = can(actor, "rates.edit", target);
   const rates = e.access === "sensitive" ? await listRates(actor, e.id) : [];
+  const [grants, assets, documents] =
+    e.access === "basic"
+      ? [[], [], []]
+      : await Promise.all([listGrants(actor, e.id), listEmployeeAssets(actor, e.id), e.access === "sensitive" ? listDocuments(actor, e.id) : []]);
   const none = t("common.none");
 
   const basicItems = [
@@ -135,6 +145,69 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
           </Card>
         )}
       </div>
+
+      {e.access !== "basic" && (
+        <div className="mt-6 grid gap-6 lg:grid-cols-3">
+          <Card title={t("profile.accesses")}>
+            {grants.length === 0 ? (
+              <p className="text-sm text-ink-mute">{t("profile.noAccesses")}</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {grants.map((g) => (
+                  <li key={g.id} className={`flex justify-between gap-2 ${g.revokedAt ? "text-ink-mute line-through" : ""}`}>
+                    <span>
+                      {g.systemName} · <span className="text-ink-soft">{g.accessLevel}</span>
+                    </span>
+                    {g.request && (
+                      <Link className="font-mono text-xs underline" href={`/requests/${g.request.id}`}>
+                        {requestNumber(g.request.number)}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <Card title={t("profile.assets")}>
+            {assets.length === 0 ? (
+              <p className="text-sm text-ink-mute">{t("profile.noAssets")}</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {assets.map((a) => (
+                  <li key={a.id}>
+                    <Badge>{t(`assets.type.${a.type}`)}</Badge> {a.name}
+                    {a.serialOrSeat && <span className="block font-mono text-xs text-ink-mute">{a.serialOrSeat}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          {e.access === "sensitive" && (
+            <Card title={t("profile.documents")}>
+              {documents.length === 0 ? (
+                <p className="mb-3 text-sm text-ink-mute">{t("profile.noDocuments")}</p>
+              ) : (
+                <ul className="mb-3 space-y-2 text-sm">
+                  {documents.map((d) => (
+                    <li key={d.id}>
+                      <a className="underline" href={d.url}>
+                        {t(`profile.docType.${d.type}`)} · {d.fileName}
+                      </a>
+                      {d.validTo && (
+                        <span className={`block text-xs ${d.status === "expired" ? "text-red-strong" : "text-ink-mute"}`}>
+                          {t("profile.validTo")}: {formatDate(d.validTo, locale)}
+                          {d.status === "expired" && <> · {t("profile.expired")}</>}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {canEdit && <DocumentUpload employeeId={e.id} />}
+            </Card>
+          )}
+        </div>
+      )}
     </>
   );
 }
