@@ -33,7 +33,9 @@
     "systems": "Systems",
     "assets": "Equipment",
     "calendar": "Calendar",
-    "settings": "Settings"
+    "settings": "Settings",
+    "shifts": "Shifts",
+    "payments": "Payments"
   },
   "login": {
     "title": "Sign in to People OS",
@@ -171,7 +173,8 @@
   "permissionGroups": {
     "people": "People",
     "admin": "Administration",
-    "requests": "Requests (phase 1)"
+    "requests": "Requests (phase 1)",
+    "money": "Shifts & payments"
   },
   "permissions": {
     "directory": {
@@ -220,6 +223,12 @@
     },
     "balances": {
       "adjust": "Manual time-off balance corrections"
+    },
+    "shifts": {
+      "manage": "Enter and confirm shifts"
+    },
+    "payments": {
+      "manage": "Payment periods, calculation, export"
     }
   },
   "import": {
@@ -663,5 +672,107 @@
     "upcoming": "Upcoming holidays & events",
     "absentToday": "Out today",
     "absentWeek": "Out this week"
+  },
+  "shifts": {
+    "title": "Shifts",
+    "add": "Add shift",
+    "employee": "Employee",
+    "start": "Start",
+    "end": "End",
+    "type": "Shift type",
+    "hours": "Hours",
+    "date": "Date",
+    "company": "Company",
+    "department": "Department",
+    "status": {
+      "planned": "Planned",
+      "confirmed": "Confirmed",
+      "locked": "Locked"
+    },
+    "confirmSelected": "Confirm selected",
+    "selectAll": "Select all planned",
+    "delete": "Delete",
+    "import": "Import shifts from CSV",
+    "importHint": "Columns: work_email, start, end (local time \"YYYY-MM-DD HH:mm\"), shift_type, department, company. Times are in the employee's location time zone.",
+    "preview": "Preview",
+    "commit": "Save",
+    "summary": "New: {create} · Unchanged: {unchanged} · Errors: {error}",
+    "from": "From",
+    "to": "To",
+    "show": "Show",
+    "empty": "No shifts",
+    "timezoneHint": "Times are entered in the employee's location time zone; a shift over midnight belongs to its start date.",
+    "defaults": "default — from the profile"
+  },
+  "payments": {
+    "title": "Payments",
+    "periods": "Periods",
+    "newPeriod": "New period",
+    "company": "Company",
+    "start": "Start",
+    "end": "End",
+    "periodStatus": {
+      "open": "Open",
+      "calculated": "Calculated",
+      "locked": "Closed"
+    },
+    "calculate": "Calculate",
+    "recalculate": "Recalculate",
+    "lock": "Close the period",
+    "lockConfirm": "Close the period? Its shifts will be locked and it can no longer be recalculated.",
+    "open": "Open",
+    "employee": "Employee",
+    "total": "Total",
+    "document": "Act / invoice",
+    "documentOk": "yes",
+    "documentMissing": "missing",
+    "notNeeded": "not needed",
+    "status": {
+      "calculated": "Calculated",
+      "documents_received": "Documents received",
+      "approved": "Approved",
+      "paid": "Paid"
+    },
+    "markDocs": "Documents received",
+    "approve": "Approve",
+    "pay": "Mark paid",
+    "paymentRef": "Payment reference",
+    "adjust": "Adjustment",
+    "amount": "Amount (+/−)",
+    "comment": "Comment (required)",
+    "add": "Add",
+    "lines": "Lines",
+    "kinds": {
+      "shifts": "Shifts",
+      "monthly_rate": "Monthly rate",
+      "bonus": "Bonus",
+      "adjustment": "Adjustment"
+    },
+    "filters": {
+      "all": "All",
+      "waiting_documents": "Waiting for documents",
+      "waiting_approval": "Waiting for approval",
+      "unpaid": "Unpaid"
+    },
+    "unpaidDays": "more than {days} days after the period end",
+    "exportCsv": "Export CSV",
+    "exportXlsx": "Export XLSX",
+    "coefficients": "Non-working day shift coefficient",
+    "coefficientHint": "Multiplier for shifts on weekends and non-working holidays of the employee's calendar. 1.0 = no premium.",
+    "save": "Save",
+    "bonuses": "Bonuses to pay",
+    "bonusStatus": {
+      "approved": "approved",
+      "included": "in a payment",
+      "paid": "paid"
+    },
+    "warnings": "Calculation warnings",
+    "warningCodes": {
+      "no_rate_for_shift": "no rate on the shift date",
+      "monthly_rate_with_shifts": "monthly rate — shifts are not paid separately"
+    },
+    "calculated": "Payments calculated: {n}",
+    "empty": "No payments",
+    "myPayments": "Payments"
   }
 }

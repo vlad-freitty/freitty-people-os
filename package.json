@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "exceljs": "^4.4.0",
     "next": "15.5.27",
     "next-auth": "^5.0.0-beta.29",
     "next-intl": "^4.3.4",

@@ -10,8 +10,20 @@ at the start of a phase propose a task plan and schema changes, write code after
 - **Phase 1 — Request engine: done locally** (plan: `docs/phase-1-plan.md`, approved 2026-10-21 with all 6 recommendations).
   Acceptance tests in `tests/engine.test.ts`. Not deployed (same hosting blocker).
 - **Phase 2 — Calendars & absences: done locally** (plan: `docs/phase-2-plan.md`). Acceptance tests in `tests/absences.test.ts`.
+- **Phase 3 — Shifts & money: done locally** (plan: `docs/phase-3-plan.md`). Acceptance tests in `tests/payments.test.ts`
+  (model CS month vs hand calculation, contractor without act). The real-month check with finance happens on staging.
 - From 2026-10-21 Vlad asked to run the remaining phases back to back: plan → build → tests → commit + push → next phase,
   without waiting for a plan approval. Decisions are recorded in `docs/phase-N-plan.md` and below.
+
+## Money map (phase 3)
+
+- `services/shifts.ts` — shifts in local time of the employee's location, `workDate` = start date in that zone,
+  confirm, CSV import with preview; locked periods refuse changes.
+- `src/server/money/calc.ts` — what a period pays: shifts (hourly/per-shift rate on the work date, ×company coefficient
+  on non-working days of the person's calendar), monthly rates pro rata by calendar days, approved bonuses.
+- `services/payments.ts` — periods, (re)calculation (keeps adjustments, skips approved/paid), statuses, contractor
+  document check, adjustments, lock, monitoring filters, export rows; `money/export.ts` — CSV (BOM) and XLSX.
+- Payment line descriptions are language-neutral ("2 × 120.00 USD", "24 h × 7.50 USD/h"); the UI shows the localized kind.
 
 ## Calendar & absences map (phase 2)
 
@@ -104,6 +116,12 @@ npm run lint && npm run typecheck
 | 33 | SLA due dates use the assignee's calendar (work week + non-working layers) — phase 1's Mon–Fri is the fallback. | PRD 4: "SLA рахується в робочих днях за календарними шарами виконавця". |
 | 34 | Initial import also covers starting balances (`manual_adjustment` "початковий залишок"), granted access and assets. | PRD 7. |
 | 35 | `NEXT_DIST_DIR` env switches the build folder so a check build can run beside a dev server. | Tooling. |
+| 36 | Phase 3 additions: `Shift.workDate/confirmedBy/confirmedAt`, `Payment.approvedBy/approvedAt`, `PaymentPeriod.lockedAt`, `Bonus.paymentId`, `Company.nonWorkingShiftCoefficient` (default 1.0); permissions `shifts.manage`, `payments.manage`. | PRD 6 needs them; the coefficient value is a finance decision. |
+| 37 | Only confirmed (or locked) shifts are paid; any edit sends a shift back to "planned". Shifts never use the "self" scope. | PRD 6: the department head confirms. |
+| 38 | Cost split: shifts are paid in the period of the company written on the shift; monthly rates and bonuses — of the employee's company. | PRD 6. |
+| 39 | A contractor payment can be approved only with an `act`/`invoice` Document whose `period` is the period's month or whose validity overlaps it — for all contractors until finance says otherwise. | PRD 6 + open question. |
+| 40 | Role `finance` defaults: `payments.manage`, `employees.view` and `employees.view_sensitive` on everyone (SQL data migration upgrades untouched defaults only). | Finance calculates and pays. |
+| 41 | Bonus currency = the request's `currency` field, else the person's latest rate currency, else USD. | PRD 6 lists no currency field. |
 
 ## Open questions (from PRD 9 + new)
 
@@ -115,4 +133,5 @@ npm run lint && npm run typecheck
 - [ ] Phase 1 — S3-compatible bucket for documents in production (with hosting, Сергій).
 - [ ] Phase 2 — Ukrainian holidays as non-working days under martial law (Legal) — seeded as informational, one flag to flip.
 - [ ] Phase 2 — official holiday lists for UA / US federal / US states (seed has demo dates for 2026–2027).
-- [ ] Phase 3 — non-working-day shift coefficient; which contractors need a monthly act/invoice (finance).
+- [ ] Phase 3 — non-working-day shift coefficient (default 1.0, editable per company on /payments); which contractors need a monthly act/invoice (now: all) — finance.
+- [ ] Phase 3 — verify one real CS month against finance's manual calculation (staging).

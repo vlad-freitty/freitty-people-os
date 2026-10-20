@@ -18,6 +18,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(actor.employeeId ? [{ href: "/tasks", label: t("nav.tasks") }, { href: "/requests", label: t("nav.requests") }, { href: "/calendar", label: t("nav.calendar") }] : []),
     ...(hasPermission(actor, "directory.view") || hasPermission(actor, "employees.view") ? [{ href: "/employees", label: t("nav.employees") }] : []),
     { href: "/org", label: t("nav.org") },
+    ...(scopeOf(actor, "shifts.manage") ? [{ href: "/shifts", label: t("nav.shifts") }] : []),
+    ...(scopeOf(actor, "payments.manage") === "all" ? [{ href: "/payments", label: t("nav.payments") }] : []),
     ...(scopeOf(actor, "templates.manage") ? [{ href: "/templates", label: t("nav.templates") }] : []),
     ...(scopeOf(actor, "systems.manage") === "all" ? [{ href: "/systems", label: t("nav.systems") }] : []),
     ...(scopeOf(actor, "assets.manage") === "all" ? [{ href: "/assets", label: t("nav.assets") }] : []),

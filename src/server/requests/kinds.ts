@@ -23,6 +23,7 @@ export async function onStart(tx: Tx, actor: Actor | null, r: RequestCtx) {
     // fail fast: type rules, overlaps, policy and balance are checked before anyone gets a step
     await checkAbsence(tx, r.subjectEmployeeId, readAbsenceValues(r.values), { hasDocument: !!r.values.document });
   }
+  if (r.kind === "bonus") readBonus(r.values);
   if (r.kind === "offboarding" && r.subjectEmployeeId) {
     const before = await tx.employee.findUniqueOrThrow({ where: { id: r.subjectEmployeeId } });
     await tx.employee.update({ where: { id: before.id }, data: { status: "offboarding" } });
@@ -53,6 +54,8 @@ export async function onComplete(tx: Tx, actor: Actor | null, r: RequestCtx) {
       return completeOffboarding(tx, actor, r);
     case "absence":
       return completeAbsence(tx, actor, r);
+    case "bonus":
+      return completeBonus(tx, actor, r);
     default:
       throw new ValidationError({ kind: `${r.kind} is not available in this phase` });
   }
@@ -174,5 +177,36 @@ async function completeAbsence(tx: Tx, actor: Actor | null, r: RequestCtx) {
     after: { type: type.code, from: input.from, to: input.to, days, balance: usage },
     departmentId: employee.departmentId,
     employeeId,
+  });
+}
+
+/** Bonus fields (PRD 4 kind bonus): the amount comes from the CS incentive system — People OS does not recalculate it. */
+function readBonus(values: Values) {
+  const amount = Number(values.amount);
+  const period = String(values.period ?? "").trim();
+  const currency = String(values.currency ?? "").trim().toUpperCase();
+  const errors: Record<string, string> = {};
+  if (!(amount > 0) || amount > 10_000_000) errors.amount = "must_be_positive";
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) errors.period = "expected_YYYY-MM";
+  if (currency && !/^[A-Z]{3}$/.test(currency)) errors.currency = "expected_ISO_code";
+  if (Object.keys(errors).length) throw new ValidationError(errors);
+  return { amount, period, currency: currency || null, reason: String(values.reason ?? "").trim(), source: values.source === "manual" ? ("manual" as const) : ("cs_incentive" as const) };
+}
+
+/** Request done → Bonus approved; it goes into the nearest open payment of the person's company (PRD 6). */
+async function completeBonus(tx: Tx, actor: Actor | null, r: RequestCtx) {
+  const b = readBonus(r.values);
+  const employee = await tx.employee.findUniqueOrThrow({ where: { id: r.subjectEmployeeId! }, include: { rates: { where: { deletedAt: null }, orderBy: { effectiveFrom: "desc" }, take: 1 } } });
+  const currency = b.currency ?? employee.rates[0]?.currency ?? "USD";
+  const bonus = await tx.bonus.create({
+    data: { employeeId: employee.id, amount: b.amount, currency, period: b.period, reason: b.reason, source: b.source, requestId: r.id, createdById: actor?.userId },
+  });
+  await audit(tx, actor, {
+    action: "request.bonus.complete",
+    entity: "Bonus",
+    entityId: bonus.id,
+    after: { amount: b.amount, currency, period: b.period },
+    departmentId: employee.departmentId,
+    employeeId: employee.id,
   });
 }

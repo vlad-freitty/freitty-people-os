@@ -51,11 +51,16 @@ export const KIND_FIELDS: Record<RequestKind, { key: string; types: FieldType[] 
     { key: "absence_type", types: ["select"] },
     { key: "dates", types: ["date_range"] },
   ],
-  bonus: [],
+  bonus: [
+    { key: "employee", types: ["person"] },
+    { key: "amount", types: ["number"] },
+    { key: "period", types: ["text"] },
+    { key: "reason", types: ["text", "textarea"] },
+  ],
 };
 
-/** Kinds whose entities exist so far. bonus → phase 3. */
-export const ENABLED_KINDS: RequestKind[] = ["generic", "hiring", "onboarding", "access", "offboarding", "absence"];
+/** Kinds the constructor allows (all PRD kinds since phase 3). */
+export const ENABLED_KINDS: RequestKind[] = ["generic", "hiring", "onboarding", "access", "offboarding", "absence", "bonus"];
 
 export const STEP_TYPES_NEEDING_VALUE: Partial<Record<string, string>> = { person: "employee id", role_first_free: "role code" };
 

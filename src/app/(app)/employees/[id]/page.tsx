@@ -7,6 +7,8 @@ import { formatDate, formatMoney, formatMonthDay, localized } from "@/lib/format
 import { getActor } from "@/server/auth/session";
 import { can, scopeOf } from "@/server/authz/policy";
 import { getBalance } from "@/server/services/absences";
+import { listPayments } from "@/server/services/payments";
+import { PaymentsTable } from "@/components/money/payments-board";
 import { BalanceAdjustForm, CancelAbsenceButton } from "@/components/balance-actions";
 import { NotFoundError } from "@/server/errors";
 import { getEmployee, listRates } from "@/server/services/employees";
@@ -35,6 +37,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
       ? [[], [], []]
       : await Promise.all([listGrants(actor, e.id), listEmployeeAssets(actor, e.id), e.access === "sensitive" ? listDocuments(actor, e.id) : []]);
   const balance = e.access === "basic" ? null : await getBalance(actor, e.id);
+  const payments = e.access === "sensitive" ? await listPayments(actor, { employeeId: e.id }) : [];
   const canAdjust = scopeOf(actor, "balances.adjust") === "all";
   const none = t("common.none");
 
@@ -198,6 +201,12 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
               {canAdjust && <BalanceAdjustForm employeeId={e.id} />}
             </div>
           </div>
+        </Card>
+      )}
+
+      {payments.length > 0 && (
+        <Card className="mt-6" title={t("payments.myPayments")}>
+          <PaymentsTable payments={payments} canManage={false} periodLocked />
         </Card>
       )}
 

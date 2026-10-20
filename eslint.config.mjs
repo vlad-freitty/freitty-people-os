@@ -13,7 +13,7 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", ".pgdata/**"],
+    ignores: ["node_modules/**", ".next/**", ".next-check/**", "out/**", "build/**", "next-env.d.ts", ".pgdata/**", ".uploads/**"],
   },
   // PRD 9, rule 2: data access only through the service layer in src/server
   {

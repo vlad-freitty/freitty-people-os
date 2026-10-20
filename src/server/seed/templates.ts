@@ -205,6 +205,39 @@ DEFS.push({
   }),
 });
 
+DEFS.push({
+  code: "bonus",
+  nameUk: "Старт премії",
+  nameEn: "Bonus payout",
+  kind: "bonus",
+  who: { mode: "roles", roleCodes: ["dept_head", "ceo", "finance"] },
+  content: () => ({
+    fields: [
+      { key: "employee", labelUk: "Співробітник", labelEn: "Employee", type: "person", required: true },
+      { key: "amount", labelUk: "Сума (з CS incentive)", labelEn: "Amount (from CS incentive)", type: "number", required: true },
+      { key: "currency", labelUk: "Валюта (порожньо — як у ставці)", labelEn: "Currency (empty = as the rate)", type: "text", required: false },
+      { key: "period", labelUk: "Період (РРРР-ММ)", labelEn: "Period (YYYY-MM)", type: "text", required: true },
+      { key: "reason", labelUk: "Підстава", labelEn: "Reason", type: "textarea", required: true },
+      {
+        key: "source",
+        labelUk: "Джерело",
+        labelEn: "Source",
+        type: "select",
+        options: [
+          { value: "cs_incentive", labelUk: "CS incentive", labelEn: "CS incentive" },
+          { value: "manual", labelUk: "Вручну", labelEn: "Manual" },
+        ],
+        required: false,
+      },
+    ],
+    steps: [
+      { orderGroup: 1, nameUk: "Погодження керівником", nameEn: "Manager approval", stepType: "approve", assigneeRule: "subject_dept_head", slaDays: 2, onReject: close },
+      { orderGroup: 2, nameUk: "Погодження CEO", nameEn: "CEO approval", stepType: "approve", assigneeRule: "role_first_free", assigneeValue: "ceo", slaDays: 2, onReject: close },
+      { orderGroup: 3, nameUk: "Фінанси: включити у виплату", nameEn: "Finance: include in payout", stepType: "task", assigneeRule: "role_first_free", assigneeValue: "finance", slaDays: 3, onReject: close },
+    ],
+  }),
+});
+
 export async function seedStarterTemplates(prisma: PrismaClient) {
   const ids: Record<string, string> = {};
   for (const def of DEFS) {

@@ -2,6 +2,7 @@
 import { PrismaClient, type EmploymentType, type RateType } from "@prisma/client";
 import { ensureSystemRoles } from "../src/server/seed/roles";
 import { seedStarterTemplates } from "../src/server/seed/templates";
+import { zonedTimeToUtc } from "../src/server/requests/sla";
 import { ensureAbsenceTypes, ensureHolidayLayer, ensureSystemLayers, FREITTY_STANDARD, HOLIDAYS } from "../src/server/seed/calendar";
 
 const prisma = new PrismaClient();
@@ -212,6 +213,41 @@ async function main() {
     assign: [{ targetType: "location", targetId: locations["Columbus, OH"] }],
   });
   await seedStarterTemplates(prisma);
+
+  // Phase 3: a few confirmed shifts of the CS agents in October 2026 and the open October period of FREITTY
+  if ((await prisma.shift.count()) === 0) {
+    const plan: [string, string, string, string][] = [
+      ["agent.ivanna@example.test", "2026-10-05", "09:00", "17:00"],
+      ["agent.ivanna@example.test", "2026-10-06", "09:00", "17:00"],
+      ["agent.ivanna@example.test", "2026-10-07", "09:00", "17:00"],
+      ["agent.mike@example.test", "2026-10-05", "22:00", "06:00"],
+      ["agent.mike@example.test", "2026-10-06", "22:00", "06:00"],
+      ["agent.sara@example.test", "2026-10-10", "08:00", "16:00"],
+    ];
+    for (const [email, date, start, end] of plan) {
+      const e = await prisma.employee.findUniqueOrThrow({ where: { workEmail: email }, include: { location: true } });
+      const tz = e.location?.timezone ?? "UTC";
+      const startAt = zonedTimeToUtc(date, `${start}:00`, tz);
+      const endDate = end < start ? new Date(new Date(`${date}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10) : date;
+      await prisma.shift.create({
+        data: {
+          employeeId: e.id,
+          companyId: e.companyId,
+          departmentId: e.departmentId,
+          locationId: e.locationId,
+          startAt,
+          endAt: zonedTimeToUtc(endDate, `${end}:00`, tz),
+          timezone: tz,
+          workDate: d(date),
+          status: "confirmed",
+          shiftType: end < start ? "night" : "regular",
+        },
+      });
+    }
+  }
+  if ((await prisma.paymentPeriod.count()) === 0) {
+    await prisma.paymentPeriod.create({ data: { companyId: companies.FREITTY, periodStart: d("2026-10-01"), periodEnd: d("2026-10-31") } });
+  }
 
   console.log(`Seeded: ${people.length + 1} employees, ${Object.keys(departments).length} departments, ${Object.keys(systems).length} systems, starter templates.`);
 }

@@ -33,7 +33,9 @@
     "systems": "Системи",
     "assets": "Техніка",
     "calendar": "Календар",
-    "settings": "Налаштування"
+    "settings": "Налаштування",
+    "shifts": "Зміни",
+    "payments": "Оплати"
   },
   "login": {
     "title": "Вхід до People OS",
@@ -171,7 +173,8 @@
   "permissionGroups": {
     "people": "Люди",
     "admin": "Адміністрування",
-    "requests": "Заявки (фаза 1)"
+    "requests": "Заявки (фаза 1)",
+    "money": "Зміни й оплати"
   },
   "permissions": {
     "directory": {
@@ -220,6 +223,12 @@
     },
     "balances": {
       "adjust": "Ручне коригування балансу відпусток"
+    },
+    "shifts": {
+      "manage": "Вносити й підтверджувати зміни"
+    },
+    "payments": {
+      "manage": "Періоди оплат, розрахунок, експорт"
     }
   },
   "import": {
@@ -663,5 +672,107 @@
     "upcoming": "Найближчі свята й події",
     "absentToday": "Сьогодні відсутні",
     "absentWeek": "Відсутні цього тижня"
+  },
+  "shifts": {
+    "title": "Зміни",
+    "add": "Додати зміну",
+    "employee": "Співробітник",
+    "start": "Початок",
+    "end": "Кінець",
+    "type": "Тип зміни",
+    "hours": "Годин",
+    "date": "Дата",
+    "company": "Компанія",
+    "department": "Відділ",
+    "status": {
+      "planned": "Заплановано",
+      "confirmed": "Підтверджено",
+      "locked": "Заблоковано"
+    },
+    "confirmSelected": "Підтвердити вибрані",
+    "selectAll": "Вибрати всі заплановані",
+    "delete": "Видалити",
+    "import": "Імпорт змін з CSV",
+    "importHint": "Колонки: work_email, start, end (місцевий час «YYYY-MM-DD HH:mm»), shift_type, department, company. Час — у таймзоні локації співробітника.",
+    "preview": "Попередній перегляд",
+    "commit": "Зберегти",
+    "summary": "Нових: {create} · Без змін: {unchanged} · Помилок: {error}",
+    "from": "З",
+    "to": "По",
+    "show": "Показати",
+    "empty": "Змін немає",
+    "timezoneHint": "Час вводиться в таймзоні локації співробітника; зміна через північ належить даті початку.",
+    "defaults": "за замовчуванням — як у профілі"
+  },
+  "payments": {
+    "title": "Оплати",
+    "periods": "Періоди",
+    "newPeriod": "Новий період",
+    "company": "Компанія",
+    "start": "Початок",
+    "end": "Кінець",
+    "periodStatus": {
+      "open": "Відкритий",
+      "calculated": "Розраховано",
+      "locked": "Закрито"
+    },
+    "calculate": "Розрахувати",
+    "recalculate": "Перерахувати",
+    "lock": "Закрити період",
+    "lockConfirm": "Закрити період? Зміни періоду буде заблоковано, перерахунок стане неможливим.",
+    "open": "Відкрити",
+    "employee": "Співробітник",
+    "total": "Разом",
+    "document": "Акт / інвойс",
+    "documentOk": "є",
+    "documentMissing": "немає",
+    "notNeeded": "не потрібен",
+    "status": {
+      "calculated": "Розраховано",
+      "documents_received": "Документи отримано",
+      "approved": "Погоджено",
+      "paid": "Оплачено"
+    },
+    "markDocs": "Документи отримано",
+    "approve": "Погодити",
+    "pay": "Оплачено",
+    "paymentRef": "Номер платежу",
+    "adjust": "Коригування",
+    "amount": "Сума (+/−)",
+    "comment": "Коментар (обов'язково)",
+    "add": "Додати",
+    "lines": "Рядки",
+    "kinds": {
+      "shifts": "Зміни",
+      "monthly_rate": "Місячна ставка",
+      "bonus": "Премія",
+      "adjustment": "Коригування"
+    },
+    "filters": {
+      "all": "Усі",
+      "waiting_documents": "Чекає документів",
+      "waiting_approval": "Чекає погодження",
+      "unpaid": "Не оплачено"
+    },
+    "unpaidDays": "понад {days} дн. після кінця періоду",
+    "exportCsv": "Експорт CSV",
+    "exportXlsx": "Експорт XLSX",
+    "coefficients": "Коефіцієнт змін у неробочі дні",
+    "coefficientHint": "Множник для змін у вихідні та неробочі свята за календарем співробітника. 1.0 — без доплати.",
+    "save": "Зберегти",
+    "bonuses": "Премії до виплати",
+    "bonusStatus": {
+      "approved": "погоджено",
+      "included": "у виплаті",
+      "paid": "оплачено"
+    },
+    "warnings": "Попередження розрахунку",
+    "warningCodes": {
+      "no_rate_for_shift": "немає ставки на дату зміни",
+      "monthly_rate_with_shifts": "місячна ставка — зміни не оплачуються окремо"
+    },
+    "calculated": "Розраховано оплат: {n}",
+    "empty": "Оплат немає",
+    "myPayments": "Оплати"
   }
 }

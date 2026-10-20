@@ -13,6 +13,10 @@ export const PERMISSIONS = {
   "employees.view_sensitive": { scopes: ["all", "departments", "self"], group: "people" },
   "employees.edit": { scopes: ["all", "departments", "self"], group: "people" },
   "rates.edit": { scopes: ["all", "departments"], group: "people" },
+  /** enter, edit and confirm shifts (PRD 6: confirmed by the department head) */
+  "shifts.manage": { scopes: ["all", "departments"], group: "money" },
+  /** payment periods, calculation, statuses, adjustments, finance export */
+  "payments.manage": { scopes: ["all"], group: "money" },
   "org.manage": { scopes: ["all"], group: "admin" },
   "roles.assign": { scopes: ["all"], group: "admin" },
   "roles.manage": { scopes: ["all"], group: "admin" },
@@ -74,11 +78,13 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Partial<Record<Permission,
     "requests.initiate": "all",
     "requests.view": "departments",
     "steps.reassign": "departments",
+    "shifts.manage": "departments",
   },
   user: USER_PERMISSIONS,
   hr: USER_PERMISSIONS,
   legal: USER_PERMISSIONS,
-  finance: USER_PERMISSIONS,
+  // finance calculates and pays (phase 3 plan): sees every profile and its money
+  finance: { ...USER_PERMISSIONS, "employees.view": "all", "employees.view_sensitive": "all", "payments.manage": "all" },
   office_admin: USER_PERMISSIONS,
 };
 
