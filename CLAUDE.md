@@ -12,6 +12,8 @@ at the start of a phase propose a task plan and schema changes, write code after
 - **Phase 2 — Calendars & absences: done locally** (plan: `docs/phase-2-plan.md`). Acceptance tests in `tests/absences.test.ts`.
 - **Phase 3 — Shifts & money: done locally** (plan: `docs/phase-3-plan.md`). Acceptance tests in `tests/payments.test.ts`
   (model CS month vs hand calculation, contractor without act). The real-month check with finance happens on staging.
+- **Phase 4 — Dashboards & polish: done locally** (plan: `docs/phase-4-plan.md`). Dashboard = one page with "Моє" /
+  "Команда" / "Компанії й фінанси" blocks shown by permission; phone layout checked at 375 px on every page.
 - From 2026-10-21 Vlad asked to run the remaining phases back to back: plan → build → tests → commit + push → next phase,
   without waiting for a plan approval. Decisions are recorded in `docs/phase-N-plan.md` and below.
 
@@ -121,6 +123,8 @@ npm run lint && npm run typecheck
 | 38 | Cost split: shifts are paid in the period of the company written on the shift; monthly rates and bonuses — of the employee's company. | PRD 6. |
 | 39 | A contractor payment can be approved only with an `act`/`invoice` Document whose `period` is the period's month or whose validity overlaps it — for all contractors until finance says otherwise. | PRD 6 + open question. |
 | 40 | Role `finance` defaults: `payments.manage`, `employees.view` and `employees.view_sensitive` on everyone (SQL data migration upgrades untouched defaults only). | Finance calculates and pays. |
+| 42 | Phone layout: header menu button below `md`, calendar agenda list below `sm`, wide tables scroll inside their card; grid columns that hold tables need `min-w-0`. | PRD 8, phase 4: every PRD 7 scenario on a phone. |
+| 43 | Localized 404 (`app/not-found.tsx`), error boundary and loading skeleton for the signed-in area. | Polish. |
 | 41 | Bonus currency = the request's `currency` field, else the person's latest rate currency, else USD. | PRD 6 lists no currency field. |
 
 ## Open questions (from PRD 9 + new)

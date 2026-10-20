@@ -18,7 +18,8 @@
     "actions": "Actions",
     "noResults": "Nothing found",
     "signOut": "Sign out",
-    "language": "Language"
+    "language": "Language",
+    "menu": "Menu"
   },
   "nav": {
     "dashboard": "Home",
@@ -774,5 +775,28 @@
     "calculated": "Payments calculated: {n}",
     "empty": "No payments",
     "myPayments": "Payments"
+  },
+  "dashboard4": {
+    "personal": "Me",
+    "team": "Team",
+    "company": "Companies & finance",
+    "myRequests": "My open requests",
+    "myShifts": "My shifts",
+    "myPayments": "My payments",
+    "teamRequests": "Department requests",
+    "expiringDocs": "Documents expiring within 30 days",
+    "headcountDepartments": "People by department",
+    "headcountCompanies": "People by company",
+    "paymentsStatus": "Payments of open periods",
+    "bonuses": "Bonuses to pay",
+    "all": "all"
+  },
+  "errorPage": {
+    "notFoundTitle": "Page not found",
+    "notFoundText": "It may have been removed, or you do not have access to it.",
+    "errorTitle": "Something went wrong",
+    "errorText": "Please try again. If it keeps happening, contact the administrator.",
+    "retry": "Try again",
+    "home": "Go home"
   }
 }

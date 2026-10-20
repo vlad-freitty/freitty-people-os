@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { signOut } from "@/auth";
 import { LocaleToggle } from "@/components/locale-toggle";
+import { MobileNav } from "@/components/mobile-nav";
 import { NavLinks } from "@/components/nav-links";
 import { getActorOrNull } from "@/server/auth/session";
 import { hasPermission, scopeOf } from "@/server/authz/policy";
@@ -32,11 +33,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-line bg-cream/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
+        <div className="relative mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <span className="font-display text-xl font-semibold">
             <span className="text-red">●</span> {t("common.appName")}
           </span>
-          <div className="order-3 w-full sm:order-none sm:w-auto sm:flex-1">
+          <MobileNav links={links} label={t("common.menu")} />
+          <div className="hidden md:block md:flex-1">
             <NavLinks links={links} />
           </div>
           <div className="ml-auto flex items-center gap-3">

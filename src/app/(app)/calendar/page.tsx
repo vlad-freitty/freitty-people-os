@@ -64,7 +64,27 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         {t("title")} · <span className="capitalize">{monthTitle}</span>
       </PageTitle>
 
-      <div className="overflow-x-auto rounded-xl border border-line bg-paper">
+      {/* phones: a list of days that have something on them (phase 4) */}
+      <ul className="space-y-2 sm:hidden">
+        {days
+          .filter((d) => d >= first && d <= last && (byDate.get(d)?.length ?? 0) > 0)
+          .map((d) => (
+            <li key={d} className={`rounded-xl border bg-paper p-3 ${d === today ? "border-red" : "border-line"}`}>
+              <p className="label">{new Intl.DateTimeFormat(locale === "uk" ? "uk-UA" : "en-US", { weekday: "short", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${d}T00:00:00Z`))}</p>
+              <ul className="space-y-1">
+                {(byDate.get(d) ?? []).map((i, n) => (
+                  <li key={n} className="flex items-center gap-2 text-sm">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: i.color }} />
+                    <span className="truncate">{label(i)}</span>
+                    {i.nonWorking && <span className="text-xs text-red-strong">· {t("nonWorking")}</span>}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-line bg-paper sm:block">
         <div className="grid min-w-[720px] grid-cols-7">
           {weekdays.map((w) => (
             <div key={w} className="border-b border-line px-2 py-1.5 text-xs font-medium tracking-wide text-ink-mute uppercase">

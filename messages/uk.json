@@ -18,7 +18,8 @@
     "actions": "Дії",
     "noResults": "Нічого не знайдено",
     "signOut": "Вийти",
-    "language": "Мова"
+    "language": "Мова",
+    "menu": "Меню"
   },
   "nav": {
     "dashboard": "Головна",
@@ -774,5 +775,28 @@
     "calculated": "Розраховано оплат: {n}",
     "empty": "Оплат немає",
     "myPayments": "Оплати"
+  },
+  "dashboard4": {
+    "personal": "Моє",
+    "team": "Команда",
+    "company": "Компанії й фінанси",
+    "myRequests": "Мої заявки в роботі",
+    "myShifts": "Мої зміни",
+    "myPayments": "Мої оплати",
+    "teamRequests": "Заявки відділу",
+    "expiringDocs": "Документи, що спливають за 30 днів",
+    "headcountDepartments": "Люди по відділах",
+    "headcountCompanies": "Люди по компаніях",
+    "paymentsStatus": "Оплати відкритих періодів",
+    "bonuses": "Премії до виплати",
+    "all": "усі"
+  },
+  "errorPage": {
+    "notFoundTitle": "Сторінку не знайдено",
+    "notFoundText": "Можливо, її видалено або у вас немає доступу.",
+    "errorTitle": "Щось пішло не так",
+    "errorText": "Спробуйте ще раз. Якщо помилка повторюється — напишіть адміністратору.",
+    "retry": "Спробувати ще раз",
+    "home": "На головну"
   }
 }

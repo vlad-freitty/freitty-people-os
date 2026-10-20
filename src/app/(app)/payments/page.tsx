@@ -43,7 +43,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     <>
       <PageTitle>{t("title")}</PageTitle>
       <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
-        <div className="space-y-6">
+        {/* min-w-0: a wide table must scroll inside its card instead of widening the grid column */}
+        <div className="min-w-0 space-y-6">
           <Card title={t("periods")}>
             <ul className="mb-4 space-y-2 text-sm">
               {periods.map((p) => (
@@ -86,7 +87,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             {FILTERS.map((f) => (
               <Link key={f} href={qs({ filter: f })} className={`rounded-md px-3 py-1.5 ${filter === f ? "bg-ink text-cream" : "bg-paper text-ink-soft hover:text-ink"}`}>

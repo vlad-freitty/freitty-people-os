@@ -42,7 +42,7 @@ const eslintConfig = [
           mode: "jsx-text-only",
           "jsx-attributes": { include: ["placeholder", "title", "alt", "aria-label", "label"] },
           // icon-like symbols and the version prefix are not UI text
-          words: { exclude: ["[\\s\\d·•●—→↳↑↓✕+*:;,.()/%-]+", "🎂", "📎.*", "v"] },
+          words: { exclude: ["[\\s\\d·•●—–→↳↑↓✕☰+*:;,.()/%-]+", "🎂", "📎.*", "v"] },
         },
       ],
     },
