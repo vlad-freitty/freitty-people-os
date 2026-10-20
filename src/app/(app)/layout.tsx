@@ -1,0 +1,54 @@
+import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import { signOut } from "@/auth";
+import { LocaleToggle } from "@/components/locale-toggle";
+import { NavLinks } from "@/components/nav-links";
+import { getActorOrNull } from "@/server/auth/session";
+import { hasPermission } from "@/server/authz/policy";
+import { getMe } from "@/server/services/me";
+
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const actor = await getActorOrNull();
+  if (!actor) redirect("/login");
+  const me = await getMe(actor);
+  const t = await getTranslations();
+
+  const links = [
+    { href: "/", label: t("nav.dashboard") },
+    ...(hasPermission(actor, "directory.view") || hasPermission(actor, "employees.view") ? [{ href: "/employees", label: t("nav.employees") }] : []),
+    { href: "/org", label: t("nav.org") },
+    ...(hasPermission(actor, "roles.manage") || hasPermission(actor, "roles.assign") ? [{ href: "/roles", label: t("nav.roles") }] : []),
+    ...(hasPermission(actor, "import.run") ? [{ href: "/import", label: t("nav.import") }] : []),
+    ...(hasPermission(actor, "audit.view") ? [{ href: "/audit", label: t("nav.audit") }] : []),
+  ];
+
+  return (
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-10 border-b border-line bg-cream/90 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
+          <span className="font-display text-xl font-semibold">
+            <span className="text-red">●</span> {t("common.appName")}
+          </span>
+          <div className="order-3 w-full sm:order-none sm:w-auto sm:flex-1">
+            <NavLinks links={links} />
+          </div>
+          <div className="ml-auto flex items-center gap-3">
+            <LocaleToggle />
+            <span className="hidden text-sm text-ink-soft md:inline">{me.employee?.name ?? me.email}</span>
+            <form
+              action={async () => {
+                "use server";
+                await signOut({ redirectTo: "/login" });
+              }}
+            >
+              <button type="submit" className="text-sm text-ink-soft underline-offset-4 hover:text-ink hover:underline">
+                {t("common.signOut")}
+              </button>
+            </form>
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">{children}</main>
+    </div>
+  );
+}

@@ -1,0 +1,257 @@
+{
+  "common": {
+    "appName": "People OS",
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add",
+    "search": "Search",
+    "all": "All",
+    "none": "—",
+    "yes": "Yes",
+    "no": "No",
+    "loading": "Loading…",
+    "saved": "Saved",
+    "back": "Back",
+    "actions": "Actions",
+    "noResults": "Nothing found",
+    "signOut": "Sign out",
+    "language": "Language"
+  },
+  "nav": {
+    "dashboard": "Home",
+    "employees": "People",
+    "org": "Org structure",
+    "roles": "Roles & permissions",
+    "import": "Import",
+    "audit": "Audit log"
+  },
+  "login": {
+    "title": "Sign in to People OS",
+    "subtitle": "Internal system of FREITTY · NETQOR · YBIS",
+    "microsoft": "Sign in with Microsoft",
+    "microsoftNotConfigured": "Microsoft sign-in is not configured yet (an Entra ID app registration is required).",
+    "devTitle": "Dev login (local only)",
+    "devHint": "Pick a seeded test user. Disabled in production.",
+    "errors": {
+      "not_registered": "This account is not in the employee registry. Please contact HR.",
+      "inactive": "This account is deactivated.",
+      "default": "Sign-in failed. Please try again."
+    }
+  },
+  "dashboard": {
+    "greeting": "Welcome, {name}",
+    "role": "Your role: {role}",
+    "headcount": "Employees",
+    "departments": "Departments",
+    "companies": "Companies",
+    "myProfile": "My profile",
+    "phaseNote": "Dashboards with tasks, time off and payments arrive in the next phases."
+  },
+  "employees": {
+    "title": "People",
+    "new": "New employee",
+    "searchPlaceholder": "Name, email or position",
+    "filterCompany": "Company",
+    "filterDepartment": "Department",
+    "filterStatus": "Status",
+    "count": "{count, plural, one {# person} other {# people}}",
+    "accessBasic": "directory"
+  },
+  "employee": {
+    "firstName": "First name",
+    "lastName": "Last name",
+    "name": "Name",
+    "workEmail": "Work email",
+    "phone": "Phone",
+    "photo": "Photo (URL)",
+    "company": "Company",
+    "department": "Department",
+    "location": "Location",
+    "position": "Position",
+    "manager": "Manager",
+    "employmentType": "Employment type",
+    "hireDate": "Hire date",
+    "probationEnd": "Probation ends",
+    "birthDate": "Date of birth",
+    "birthday": "Birthday",
+    "showBirthday": "Show birthday to colleagues",
+    "status": "Status",
+    "locale": "Interface language",
+    "role": "Role",
+    "profile": "Profile",
+    "editTitle": "Edit profile",
+    "createTitle": "New employee",
+    "basicNotice": "You see the basic colleague directory data.",
+    "rates": "Rates",
+    "currentRate": "Current rate",
+    "rateHistory": "Rate history",
+    "addRate": "New rate",
+    "rateType": "Rate type",
+    "amount": "Amount",
+    "currency": "Currency",
+    "effectiveFrom": "Effective from",
+    "effectiveTo": "Effective to",
+    "rateHint": "Rates are never edited: a new rate closes the previous one the day before.",
+    "noRates": "No rates yet",
+    "deleteConfirm": "Delete this profile? The record will be marked as deleted."
+  },
+  "status": {
+    "candidate": "Candidate",
+    "onboarding": "Onboarding",
+    "active": "Active",
+    "offboarding": "Offboarding",
+    "left": "Left"
+  },
+  "employmentType": {
+    "employee": "Employee",
+    "contractor": "Contractor"
+  },
+  "rateType": {
+    "hourly": "Hourly",
+    "per_shift": "Per shift",
+    "monthly": "Monthly"
+  },
+  "locales": {
+    "uk": "Українська",
+    "en": "English"
+  },
+  "org": {
+    "title": "Org structure",
+    "companies": "Companies",
+    "departments": "Departments",
+    "locations": "Locations",
+    "name": "Name",
+    "country": "Country",
+    "state": "State / region",
+    "timezone": "Time zone (IANA)",
+    "parent": "Parent department",
+    "heads": "Heads",
+    "headsEdit": "Department heads",
+    "employeeCount": "People",
+    "newCompany": "New company",
+    "newDepartment": "New department",
+    "newLocation": "New location",
+    "noParent": "— no parent —",
+    "selectHeads": "Pick one or more"
+  },
+  "roles": {
+    "title": "Roles & permissions",
+    "rolesTab": "Roles",
+    "usersTab": "Users",
+    "code": "Code",
+    "nameUk": "Name (UA)",
+    "nameEn": "Name (EN)",
+    "system": "system",
+    "locked": "Superadmin always has every permission — this role cannot be edited.",
+    "users": "Users",
+    "newRole": "New role",
+    "permission": "Permission",
+    "scope": "Scope",
+    "noAccess": "none",
+    "email": "Email",
+    "lastLogin": "Last sign-in",
+    "assign": "Role",
+    "intro": "The superadmin configures what each role can do. The \"own departments\" scope means departments the person heads, including sub-departments, plus their own profile.",
+    "copyFrom": "Copy permissions from"
+  },
+  "scopes": {
+    "all": "all",
+    "departments": "own departments",
+    "self": "own only"
+  },
+  "permissionGroups": {
+    "people": "People",
+    "admin": "Administration",
+    "requests": "Requests (phase 1)"
+  },
+  "permissions": {
+    "directory": {
+      "view": "Colleague directory (basic fields)"
+    },
+    "employees": {
+      "view": "Full profiles",
+      "view_sensitive": "Rates, payments, bonuses, documents",
+      "edit": "Edit profiles"
+    },
+    "rates": {
+      "edit": "Change rates"
+    },
+    "org": {
+      "manage": "Companies, departments, locations"
+    },
+    "roles": {
+      "assign": "Assign roles",
+      "manage": "Configure roles & permissions"
+    },
+    "import": {
+      "run": "Data import"
+    },
+    "settings": {
+      "manage": "Calendars, dictionaries, policies"
+    },
+    "audit": {
+      "view": "Audit log"
+    },
+    "templates": {
+      "manage": "Create request templates",
+      "publish": "Publish templates"
+    },
+    "requests": {
+      "initiate": "Start requests"
+    },
+    "steps": {
+      "reassign": "Reassign stuck steps"
+    }
+  },
+  "import": {
+    "title": "CSV import",
+    "kind": "What to import",
+    "kinds": {
+      "org": "Companies & departments",
+      "employees": "Employees",
+      "rates": "Rate history"
+    },
+    "order": "Order: companies & departments first, then employees, then rates. Locations are created under \"Org structure\".",
+    "columns": "Template columns",
+    "downloadTemplate": "Download template",
+    "file": "CSV file",
+    "preview": "Preview",
+    "commit": "Confirm import",
+    "committed": "Import saved",
+    "hasErrors": "There are errors — fix the file and upload it again. Nothing was saved.",
+    "line": "Line",
+    "key": "Record",
+    "result": "Action",
+    "errors": "Errors",
+    "actions": {
+      "create": "create",
+      "update": "update",
+      "unchanged": "unchanged",
+      "error": "error"
+    },
+    "summary": "Create: {create} · Update: {update} · Unchanged: {unchanged} · Errors: {error}"
+  },
+  "audit": {
+    "title": "Audit log",
+    "at": "When",
+    "actor": "Who",
+    "action": "Action",
+    "entity": "Object",
+    "details": "Changes",
+    "system": "system",
+    "redacted": "hidden — no access to this data",
+    "before": "Before",
+    "after": "After"
+  },
+  "errors": {
+    "forbidden": "You don't have permission for this action.",
+    "not_found": "Not found.",
+    "validation_failed": "Please check the fields.",
+    "conflict": "Conflict: the record already exists or the action is not allowed.",
+    "unauthorized": "Your session has ended, please sign in again.",
+    "internal_error": "Server error. Please try again later."
+  }
+}

@@ -1,0 +1,68 @@
+# FREITTY People OS — notes for Claude Code
+
+Source of truth for scope: `FREITTY People OS — PRD для Claude Code` (Oct 20, 2026). Work strictly by phases (PRD 8);
+at the start of a phase propose a task plan and schema changes, write code after the plan is approved.
+
+## Status
+
+- **Phase 0 — Foundation: done locally**, acceptance tests green (`npm test`). Not deployed: hosting/staging is an
+  open question for Сергій.
+- Phase 1 (request engine) not started.
+
+## Commands
+
+```bash
+npm run db          # local PostgreSQL 17 on :5433 (embedded, no Docker) — keep running in its own terminal
+npm run db:migrate  # prisma migrate dev
+npm run db:seed     # fake data (example.test emails)
+npm run dev         # http://localhost:3000, dev login enabled via DEV_LOGIN=true
+npm test            # vitest: unit + integration against people_os_test
+npm run lint && npm run typecheck
+```
+
+## Architecture rules (PRD 9)
+
+- **All data access goes through `src/server/services/*`.** Every service takes `actor` as the first argument and does
+  its own permission checks. ESLint forbids importing Prisma (`@prisma/client` values, `@/server/db`) outside `src/server`.
+- Route handlers (`src/app/api/v1/**`) are thin: `route()` in `src/server/http.ts` resolves the actor and maps errors.
+  Server components call the same services directly — there is one permission path.
+- **Field-level access** lives in `src/server/services/employee-dto.ts`: `basic` (colleague directory) / `full` / `sensitive`.
+  A field that is not in the DTO for that level never leaves the server.
+- Records outside the actor's visibility return **404**, not 403 (existence is not leaked). Visible-but-not-allowed → 403.
+- Every mutation writes `AuditLog` in the same transaction (`src/server/audit.ts`). Audit payloads are redacted for
+  readers who lack the data permission (e.g. rate amounts).
+- Date-only values travel as `YYYY-MM-DD`, stored as UTC midnight `@db.Date`. Use `src/lib/dates.ts`, never local time.
+  Timestamps are shown in the browser time zone (`<LocalTime>`).
+- All UI strings via next-intl keys in `messages/{uk,en}.json` (ESLint `i18next/no-literal-string` in `src/app`, `src/components`).
+  next-intl treats `.` as nesting, so dotted keys (permission names) are stored as nested objects.
+
+## Decisions and deviations from the PRD
+
+| # | Decision | Why / who |
+|---|----------|-----------|
+| 1 | **Microsoft Entra ID SSO instead of Google SSO.** `User.entraOid` replaces `google_sub`. Single-tenant issuer → only corporate accounts. | Vlad, 2026-10-20: the company signs in with corporate Microsoft accounts. Needs an Entra app registration (tenant id, client id, secret) → env `AUTH_MICROSOFT_ENTRA_ID_*`. |
+| 2 | Sign-in is allowed only for an existing User, an Employee whose `work_email` matches (User created with role `user`), or `SUPERADMIN_EMAIL`. Unknown emails are rejected. | PRD 2: roles are assigned by the superadmin; no self-registration. |
+| 3 | **Dev login** (pick a seeded user, no password) when `NODE_ENV !== production` and `DEV_LOGIN=true`. | Local work and tests before Entra is registered. Never enabled in production builds. |
+| 4 | **Configurable roles**: new entities `Role`, `RolePermission`; `User.roleId` replaces the `role` enum. Permission catalog is code (`src/server/authz/permissions.ts`), the role → permission → scope matrix is edited by the superadmin in `/roles`. | Vlad, 2026-10-20: "суперадмін може налаштовувати всім права". |
+| 5 | **CEO = all permissions** (seed default; editable). Superadmin role is locked to all permissions. Only a superadmin can grant/revoke the superadmin role; the last active superadmin cannot be demoted. | Vlad, 2026-10-20 (closes PRD open question on CEO rights). Guards prevent lockout / privilege escalation. |
+| 6 | Scopes are nested `all ⊃ departments ⊃ self`; `departments` = departments the person heads **including sub-departments**, plus own profile. | Vlad confirmed sub-departments, 2026-10-20. |
+| 7 | Colleague directory (`directory.view`) shows only statuses onboarding/active/offboarding; candidates and people who left are visible only with `employees.view`. | Candidates aren't colleagues yet; reduces exposure of personal data. |
+| 8 | `RateHistory`: one timeline per employee (`@@unique([employeeId, effectiveFrom])`), a new rate must start after the latest one and closes the open record the day before. Amounts are never edited; no back-dated inserts yet. | PRD 6 "старі записи не редагуються". Back-dated corrections to be designed with finance in phase 3. |
+| 9 | `Employee.companyId` is derived from the department (a department belongs to one company). | Keeps company/department consistent. |
+| 10 | `AuditLog` technical fields `departmentId`, `employeeId` (who/what the entry is about) for scoped reading. | PRD 2: dept heads see the audit log of their departments. |
+| 11 | `Employee.absencePolicyId` exists without FK; FK is added in phase 2 together with `AbsencePolicy`. | Entity belongs to phase 2. |
+| 12 | Locale: `Employee.locale` is the source of truth for signed-in users; cookie `NEXT_LOCALE` for the login page / users without a profile. No locale in URLs. | PRD 7. |
+| 13 | **Local DB = `embedded-postgres`** (real PostgreSQL 17 binaries from npm, data in `.pgdata/`, port 5433). Dev DB `people_os_dev`, tests `people_os_test`. | No Docker/admin rights on the dev machine. An unused empty `people_os` DB from the first migration attempt can be dropped manually. |
+| 14 | Import: preview runs the exact commit code in a transaction that is rolled back; commit is all-or-nothing and refused if any row has errors. Keys: `work_email`; `(company, department name)`; `(work_email, effective_from)`. Locations are created in the UI, not imported. | PRD 7. |
+| 15 | UI components are hand-written in shadcn style (`src/components/ui.tsx`) instead of the shadcn CLI. Brand tokens in `globals.css` are a first pass (red taken from FREITTY Wiki `#ff3d5a` family) — replace with the brand book. | Fewer moving parts in phase 0. |
+| 16 | Prisma models use camelCase columns, snake_case table names. | Prisma convention. |
+
+## Open questions (from PRD 9 + new)
+
+- [ ] Phase 0 — hosting, staging, where personal data physically lives (Сергій).
+- [ ] Phase 0 — Entra ID app registration: tenant id, client id, secret, redirect URI `https://<host>/api/auth/callback/microsoft-entra-id`.
+- [ ] Phase 0 — people without a corporate Microsoft account (e.g. contractors): local email+password accounts issued by the superadmin? Not built yet.
+- [ ] Phase 1 — do dept heads publish their department's templates themselves or via superadmin approval?
+- [ ] Phase 1 — systems for access requests and their owners; data retention after status `left` (Legal).
+- [ ] Phase 2 — Ukrainian holidays as non-working days under martial law (Legal).
+- [ ] Phase 3 — non-working-day shift coefficient; which contractors need a monthly act/invoice (finance).

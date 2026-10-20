@@ -1,0 +1,257 @@
+{
+  "common": {
+    "appName": "People OS",
+    "save": "Зберегти",
+    "cancel": "Скасувати",
+    "create": "Створити",
+    "edit": "Редагувати",
+    "delete": "Видалити",
+    "add": "Додати",
+    "search": "Пошук",
+    "all": "Усі",
+    "none": "—",
+    "yes": "Так",
+    "no": "Ні",
+    "loading": "Завантаження…",
+    "saved": "Збережено",
+    "back": "Назад",
+    "actions": "Дії",
+    "noResults": "Нічого не знайдено",
+    "signOut": "Вийти",
+    "language": "Мова"
+  },
+  "nav": {
+    "dashboard": "Головна",
+    "employees": "Люди",
+    "org": "Оргструктура",
+    "roles": "Ролі й права",
+    "import": "Імпорт",
+    "audit": "Журнал дій"
+  },
+  "login": {
+    "title": "Вхід до People OS",
+    "subtitle": "Внутрішня система FREITTY · NETQOR · YBIS",
+    "microsoft": "Увійти через Microsoft",
+    "microsoftNotConfigured": "Вхід через Microsoft ще не налаштовано (потрібна реєстрація застосунку в Entra ID).",
+    "devTitle": "Dev-вхід (тільки локально)",
+    "devHint": "Оберіть тестового користувача із seed. У production цей блок вимкнений.",
+    "errors": {
+      "not_registered": "Цього акаунта немає в реєстрі співробітників. Зверніться до HR.",
+      "inactive": "Акаунт деактивовано.",
+      "default": "Не вдалося увійти. Спробуйте ще раз."
+    }
+  },
+  "dashboard": {
+    "greeting": "Вітаємо, {name}",
+    "role": "Ваша роль: {role}",
+    "headcount": "Співробітників",
+    "departments": "Відділів",
+    "companies": "Компаній",
+    "myProfile": "Мій профіль",
+    "phaseNote": "Дашборди із задачами, відпустками й оплатами з'являться в наступних фазах."
+  },
+  "employees": {
+    "title": "Люди",
+    "new": "Новий співробітник",
+    "searchPlaceholder": "Ім'я, email або посада",
+    "filterCompany": "Компанія",
+    "filterDepartment": "Відділ",
+    "filterStatus": "Статус",
+    "count": "{count, plural, one {# людина} few {# людини} many {# людей} other {# людини}}",
+    "accessBasic": "довідник"
+  },
+  "employee": {
+    "firstName": "Ім'я",
+    "lastName": "Прізвище",
+    "name": "Ім'я",
+    "workEmail": "Робочий email",
+    "phone": "Телефон",
+    "photo": "Фото (URL)",
+    "company": "Компанія",
+    "department": "Відділ",
+    "location": "Локація",
+    "position": "Посада",
+    "manager": "Керівник",
+    "employmentType": "Тип зайнятості",
+    "hireDate": "Дата найму",
+    "probationEnd": "Кінець випробувального",
+    "birthDate": "Дата народження",
+    "birthday": "День народження",
+    "showBirthday": "Показувати день народження колегам",
+    "status": "Статус",
+    "locale": "Мова інтерфейсу",
+    "role": "Роль",
+    "profile": "Профіль",
+    "editTitle": "Редагування профілю",
+    "createTitle": "Новий співробітник",
+    "basicNotice": "Ви бачите базові дані з довідника колег.",
+    "rates": "Ставки",
+    "currentRate": "Поточна ставка",
+    "rateHistory": "Історія ставок",
+    "addRate": "Нова ставка",
+    "rateType": "Тип ставки",
+    "amount": "Сума",
+    "currency": "Валюта",
+    "effectiveFrom": "Діє з",
+    "effectiveTo": "Діє до",
+    "rateHint": "Ставки не редагуються: нова ставка закриває попередню днем раніше.",
+    "noRates": "Ставок ще немає",
+    "deleteConfirm": "Видалити профіль? Запис буде позначено як видалений."
+  },
+  "status": {
+    "candidate": "Кандидат",
+    "onboarding": "Онбординг",
+    "active": "Активний",
+    "offboarding": "Офбординг",
+    "left": "Звільнений"
+  },
+  "employmentType": {
+    "employee": "Штатний",
+    "contractor": "Contractor"
+  },
+  "rateType": {
+    "hourly": "Погодинна",
+    "per_shift": "За зміну",
+    "monthly": "Місячна"
+  },
+  "locales": {
+    "uk": "Українська",
+    "en": "English"
+  },
+  "org": {
+    "title": "Оргструктура",
+    "companies": "Компанії",
+    "departments": "Відділи",
+    "locations": "Локації",
+    "name": "Назва",
+    "country": "Країна",
+    "state": "Штат / регіон",
+    "timezone": "Часовий пояс (IANA)",
+    "parent": "Батьківський відділ",
+    "heads": "Керівники",
+    "headsEdit": "Керівники відділу",
+    "employeeCount": "Людей",
+    "newCompany": "Нова компанія",
+    "newDepartment": "Новий відділ",
+    "newLocation": "Нова локація",
+    "noParent": "— без батьківського —",
+    "selectHeads": "Оберіть одного або кількох"
+  },
+  "roles": {
+    "title": "Ролі й права",
+    "rolesTab": "Ролі",
+    "usersTab": "Користувачі",
+    "code": "Код",
+    "nameUk": "Назва (UA)",
+    "nameEn": "Назва (EN)",
+    "system": "системна",
+    "locked": "Суперадмін завжди має всі права — роль не редагується.",
+    "users": "Користувачів",
+    "newRole": "Нова роль",
+    "permission": "Право",
+    "scope": "Обсяг",
+    "noAccess": "немає",
+    "email": "Email",
+    "lastLogin": "Останній вхід",
+    "assign": "Роль",
+    "intro": "Суперадмін налаштовує, що може кожна роль. Обсяг «свої відділи» — відділи, якими людина керує, разом із дочірніми, плюс власний профіль.",
+    "copyFrom": "Скопіювати права з"
+  },
+  "scopes": {
+    "all": "усі",
+    "departments": "свої відділи",
+    "self": "тільки своє"
+  },
+  "permissionGroups": {
+    "people": "Люди",
+    "admin": "Адміністрування",
+    "requests": "Заявки (фаза 1)"
+  },
+  "permissions": {
+    "directory": {
+      "view": "Довідник колег (базові поля)"
+    },
+    "employees": {
+      "view": "Повні профілі",
+      "view_sensitive": "Ставки, оплати, премії, документи",
+      "edit": "Редагувати профілі"
+    },
+    "rates": {
+      "edit": "Змінювати ставки"
+    },
+    "org": {
+      "manage": "Компанії, відділи, локації"
+    },
+    "roles": {
+      "assign": "Призначати ролі",
+      "manage": "Налаштовувати ролі й права"
+    },
+    "import": {
+      "run": "Імпорт даних"
+    },
+    "settings": {
+      "manage": "Календарі, довідники, політики"
+    },
+    "audit": {
+      "view": "Журнал дій"
+    },
+    "templates": {
+      "manage": "Створювати шаблони заявок",
+      "publish": "Публікувати шаблони"
+    },
+    "requests": {
+      "initiate": "Ініціювати заявки"
+    },
+    "steps": {
+      "reassign": "Перепризначати завислі кроки"
+    }
+  },
+  "import": {
+    "title": "Імпорт CSV",
+    "kind": "Що імпортуємо",
+    "kinds": {
+      "org": "Компанії й відділи",
+      "employees": "Співробітники",
+      "rates": "Історія ставок"
+    },
+    "order": "Порядок: спершу компанії й відділи, потім співробітники, потім ставки. Локації створюються в «Оргструктурі».",
+    "columns": "Колонки шаблону",
+    "downloadTemplate": "Завантажити шаблон",
+    "file": "CSV-файл",
+    "preview": "Попередній перегляд",
+    "commit": "Підтвердити імпорт",
+    "committed": "Імпорт збережено",
+    "hasErrors": "Є помилки — виправте файл і завантажте знову. Нічого не збережено.",
+    "line": "Рядок",
+    "key": "Запис",
+    "result": "Дія",
+    "errors": "Помилки",
+    "actions": {
+      "create": "створити",
+      "update": "оновити",
+      "unchanged": "без змін",
+      "error": "помилка"
+    },
+    "summary": "Створити: {create} · Оновити: {update} · Без змін: {unchanged} · Помилок: {error}"
+  },
+  "audit": {
+    "title": "Журнал дій",
+    "at": "Коли",
+    "actor": "Хто",
+    "action": "Дія",
+    "entity": "Об'єкт",
+    "details": "Зміни",
+    "system": "система",
+    "redacted": "приховано — немає прав на ці дані",
+    "before": "Було",
+    "after": "Стало"
+  },
+  "errors": {
+    "forbidden": "Немає прав на цю дію.",
+    "not_found": "Не знайдено.",
+    "validation_failed": "Перевірте заповнення полів.",
+    "conflict": "Конфлікт: такий запис уже існує або дію заборонено.",
+    "unauthorized": "Сесія завершилась, увійдіть знову.",
+    "internal_error": "Помилка сервера. Спробуйте пізніше."
+  }
+}

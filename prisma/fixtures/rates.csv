@@ -1,0 +1,6 @@
+work_email,rate_type,amount,currency,effective_from
+person01@example.test,hourly,7.50,USD,2025-07-01
+person01@example.test,hourly,6.00,USD,2025-01-01
+person02@example.test,per_shift,120,USD,2025-03-01
+person04@example.test,monthly,1800,USD,2024-11-01
+person50@example.test,monthly,2600,USD,2024-06-01
