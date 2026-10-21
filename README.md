@@ -32,7 +32,12 @@ npm test        # needs `npm run db` running; uses the people_os_test database
 - First admin (on the server, once): `npm run admin:create -- --email admin@company.com --name "First Last"` prints a
   one-time password; sign in and set your own. Everyone else gets access from **Доступи** (`/access`, superadmin and HR).
   Forgotten admin password: `npm run admin:create -- --email admin@company.com --reset`.
-- After an update of an existing database: `npx prisma migrate deploy`, then `npm run db:upgrade`.
+- New production database: `npx prisma migrate deploy` → `npm run db:upgrade` (roles, absence types, policies, starter
+  templates — no fake data; never run `db:seed` there) → `npm run admin:create`. Run them from any machine with
+  `DATABASE_URL` pointing to that database (Vercel has no shell).
+- After every release: `npx prisma migrate deploy`, then `npm run db:upgrade`.
+- Vercel runs only the web app: the worker (daily balances, Telegram delivery) needs a separate always-on host;
+  balances are also synced on every page view and booking, so they stay correct without it.
 - `docker build -t people-os .` — the container runs `prisma migrate deploy` on start.
 - Run the worker next to the web container: `docker build --target worker -t people-os-worker .` — daily balances, overdue notices,
   Telegram delivery. Telegram needs `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` (see `.env.example`).
