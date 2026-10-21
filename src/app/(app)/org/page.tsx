@@ -37,7 +37,7 @@ export default async function OrgPage() {
           </span>
         </summary>
         {canManage && (
-          <div className="mt-3 grid gap-4 rounded-lg bg-cream/60 p-4 lg:grid-cols-2">
+          <div className="mt-3 grid gap-4 rounded-xl bg-cream/60 p-4 lg:grid-cols-2">
             <DepartmentForm companies={org.companies} departments={org.departments} initial={d} />
             <HeadsEditor department={d} people={peopleOptions} />
           </div>

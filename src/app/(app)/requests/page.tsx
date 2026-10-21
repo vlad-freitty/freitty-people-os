@@ -27,13 +27,13 @@ export default async function RequestsPage({ searchParams }: { searchParams: Pro
           <Link
             key={key}
             href={key === "all" ? "/requests" : `/requests?mine=${key}`}
-            className={`rounded-md px-3 py-1.5 ${mine === key ? "bg-ink text-cream" : "bg-paper text-ink-soft hover:text-ink"}`}
+            className={`rounded-full px-3 py-1.5 ${mine === key ? "bg-navy text-white" : "bg-paper text-ink-soft hover:text-ink"}`}
           >
             {t(`requests.${label}`)}
           </Link>
         ))}
       </div>
-      <div className="overflow-x-auto rounded-xl border border-line bg-paper">
+      <div className="overflow-x-auto rounded-card border border-edge bg-paper">
         <table className="table">
           <thead>
             <tr>

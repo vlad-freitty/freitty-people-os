@@ -50,7 +50,10 @@
       "not_registered": "This account is not in the employee registry. Please contact HR.",
       "inactive": "This account is deactivated.",
       "default": "Sign-in failed. Please try again."
-    }
+    },
+    "welcome": "Welcome back",
+    "panelTitle": "People, requests and payments in one place",
+    "panelText": "Onboarding, time off, shifts, access and equipment for the whole holding team."
   },
   "dashboard": {
     "greeting": "Welcome, {name}",
@@ -836,5 +839,14 @@
     "codeHint": "Open the bot with the link or send it: /start {code} (the code is valid for {minutes} min).",
     "save": "Save",
     "type": "Event"
+  },
+  "shell": {
+    "sectionWork": "Work",
+    "sectionPeople": "People",
+    "sectionOps": "Operations",
+    "sectionAdmin": "Admin",
+    "newRequest": "New request",
+    "searchPlaceholder": "Search people by name or email",
+    "closeMenu": "Close menu"
   }
 }

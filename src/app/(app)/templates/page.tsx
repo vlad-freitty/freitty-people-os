@@ -23,7 +23,7 @@ export default async function TemplatesPage() {
     <>
       <PageTitle>{t("templates.title")}</PageTitle>
       <div className="space-y-6">
-        <div className="overflow-x-auto rounded-xl border border-line bg-paper">
+        <div className="overflow-x-auto rounded-card border border-edge bg-paper">
           <table className="table">
             <thead>
               <tr>

@@ -41,7 +41,7 @@ export function NotificationSettings({ initial }: { initial: Settings }) {
   return (
     <div className="space-y-4">
       <ErrorBox error={error} />
-      <div className="space-y-2 rounded-lg bg-cream/60 p-3 text-sm">
+      <div className="space-y-2 rounded-xl bg-cream/60 p-3 text-sm">
         <p className="label">{t("telegram")}</p>
         {!initial.telegram.configured ? (
           <p className="text-ink-soft">{t("notConfigured")}</p>

@@ -73,7 +73,7 @@ export function ImportWizard({ templates }: { templates: Record<Kind, string[]> 
           />
         </Field>
       </div>
-      <div className="rounded-lg bg-cream/70 p-3 text-xs">
+      <div className="rounded-xl bg-cream/70 p-3 text-xs">
         <span className="label">{t("columns")}</span>
         <code className="break-all">{templates[kind].join(", ")}</code>
         <a className={buttonClass("secondary", "mt-2 py-1 text-xs")} href={templateHref} download={`${kind}-template.csv`}>
@@ -95,10 +95,10 @@ export function ImportWizard({ templates }: { templates: Record<Kind, string[]> 
 
       {result && (
         <div className="space-y-3">
-          {result.committed && <p className="rounded-md bg-ok-tint px-3 py-2 text-sm text-ok">{t("committed")}</p>}
-          {hasErrors && <p className="rounded-md bg-red-tint px-3 py-2 text-sm text-red-strong">{t("hasErrors")}</p>}
+          {result.committed && <p className="rounded-xl bg-ok-tint px-3 py-2 text-sm text-ok">{t("committed")}</p>}
+          {hasErrors && <p className="rounded-xl bg-red-tint px-3 py-2 text-sm text-red-strong">{t("hasErrors")}</p>}
           <p className="text-sm font-medium">{t("summary", result.summary)}</p>
-          <div className="max-h-[480px] overflow-auto rounded-xl border border-line bg-paper">
+          <div className="max-h-[480px] overflow-auto rounded-card border border-edge bg-paper">
             <table className="table">
               <thead>
                 <tr>

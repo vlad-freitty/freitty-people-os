@@ -132,6 +132,7 @@ npm run lint && npm run typecheck
 | 44 | Notifications: `Notification` (in_app / telegram) written in the same transaction as the request change; worker delivers Telegram every 10 s (≤ 5 attempts) and announces overdue steps every 5 min (once per step via `StepInstance.overdueNotifiedAt`). | PRD 3, 8: "протягом 1 хвилини". |
 | 45 | Telegram link: one-time code (15 min) from the profile → `/start <code>` in the bot; `/stop` or the profile button unlinks. Bot updates by long polling in the worker, or a webhook `/api/telegram/webhook` when `TELEGRAM_WEBHOOK_SECRET` is set. | Works without a public URL. |
 | 46 | Additions in phase 5: `User.telegramChatId/telegramLinkCode/telegramLinkExpires/notificationPrefs`, notification delivery fields, in-app bell and `/notifications` page. | PRD 3 lists channel in_app. |
+| 47 | UI follows the Figma file "Client Cabinet", page "Admin - Desktop" (node 145:2): navy 218–232 px sidebar with pill links and a red "Нова заявка" button, white top bar (people search, language, bell), #F4F4F4 content, 18 px cards, pill buttons/badges/inputs, red tabs, KPI cards with a coloured top edge. Font Satoshi (self-hosted, `src/app/fonts`) with Manrope as the Cyrillic fallback (Satoshi has no Cyrillic); icons Hugeicons (free set). Sign-in uses a navy brand panel instead of the truck photo. | Design request from Vlad, 2026-10-21. |
 
 ## Open questions (from PRD 9 + new)
 

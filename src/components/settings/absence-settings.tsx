@@ -66,7 +66,7 @@ export function AbsenceTypeForm({ type }: { type?: AbsenceTypeDto }) {
   });
   return (
     <form
-      className="space-y-2 rounded-lg border border-line p-3"
+      className="space-y-2 rounded-xl border border-line p-3"
       onSubmit={(e) => {
         e.preventDefault();
         const body = { ...v, nameEn: v.nameEn || null, minDays: v.minDays ? Number(v.minDays) : null, maxDays: v.maxDays ? Number(v.maxDays) : null };
@@ -138,7 +138,7 @@ export function PolicyForm({ policy }: { policy?: PolicyDto }) {
   );
   return (
     <form
-      className="space-y-3 rounded-lg border border-line p-3"
+      className="space-y-3 rounded-xl border border-line p-3"
       onSubmit={(e) => {
         e.preventDefault();
         const body = {

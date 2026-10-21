@@ -49,7 +49,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             <ul className="mb-4 space-y-2 text-sm">
               {periods.map((p) => (
                 <li key={p.id}>
-                  <Link href={qs({ period: p.id })} className={`flex items-center justify-between gap-2 rounded-md px-2 py-1.5 ${p.id === current?.id ? "bg-ink text-cream" : "hover:bg-cream-deep"}`}>
+                  <Link href={qs({ period: p.id })} className={`flex items-center justify-between gap-2 rounded-full px-3 py-1.5 ${p.id === current?.id ? "bg-navy text-white" : "hover:bg-cream-deep"}`}>
                     <span>
                       <span className="font-medium">{p.company.name}</span> · {formatDate(p.periodStart, locale)} — {formatDate(p.periodEnd, locale)}
                       <span className="block text-xs opacity-75">{p.totals.map((x) => `${x.total} ${x.currency}`).join(" · ")}</span>
@@ -90,7 +90,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             {FILTERS.map((f) => (
-              <Link key={f} href={qs({ filter: f })} className={`rounded-md px-3 py-1.5 ${filter === f ? "bg-ink text-cream" : "bg-paper text-ink-soft hover:text-ink"}`}>
+              <Link key={f} href={qs({ filter: f })} className={`rounded-full px-3 py-1.5 ${filter === f ? "bg-navy text-white" : "bg-paper text-ink-soft hover:text-ink"}`}>
                 {t(`filters.${f}`)}
               </Link>
             ))}

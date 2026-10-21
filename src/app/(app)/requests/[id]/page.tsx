@@ -62,7 +62,7 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
                   {r.steps
                     .filter((s) => s.group === g)
                     .map((s) => (
-                      <li key={s.id} className={`rounded-lg border p-3 ${s.isMine ? "border-ink" : "border-line"} ${["skipped", "rejected"].includes(s.status) ? "opacity-70" : ""}`}>
+                      <li key={s.id} className={`rounded-xl border p-3 ${s.isMine ? "border-ink" : "border-line"} ${["skipped", "rejected"].includes(s.status) ? "opacity-70" : ""}`}>
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <span>
                             <span className="font-medium">{localized(locale, s.nameUk, s.nameEn)}</span>

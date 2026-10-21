@@ -1,7 +1,8 @@
+import { Alert02Icon, Calendar03Icon, FileEditIcon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { LocalTime } from "@/components/local-time";
-import { Badge, Card, LinkButton, PageTitle } from "@/components/ui";
+import { Badge, Card, Kpi, LinkButton, PageTitle } from "@/components/ui";
 import { formatDate, formatMoney, localized } from "@/lib/format";
 import { getActor } from "@/server/auth/session";
 import { scopeOf } from "@/server/authz/policy";
@@ -78,14 +79,23 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <PageTitle actions={me.employee && <LinkButton variant="secondary" href={`/employees/${me.employee.id}`}>{t("dashboard.myProfile")}</LinkButton>}>
+      <PageTitle
+        subtitle={t("dashboard.role", { role: localized(locale, me.role.nameUk, me.role.nameEn) })}
+        actions={me.employee && <LinkButton variant="secondary" href={`/employees/${me.employee.id}`}>{t("dashboard.myProfile")}</LinkButton>}
+      >
         {t("dashboard.greeting", { name: me.employee?.name ?? me.email })}
       </PageTitle>
-      <p className="-mt-4 mb-6 text-sm text-ink-soft">{t("dashboard.role", { role: localized(locale, me.role.nameUk, me.role.nameEn) })}</p>
+
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Kpi label={t("dashboard2.myTasks")} value={tasks.length} icon={TaskDone01Icon} tone="ok" href="/tasks" />
+        {hasProfile && <Kpi label={t("dashboard4.myRequests")} value={myRequests.length} icon={FileEditIcon} tone="blue" href="/requests?mine=initiated" />}
+        {balance && <Kpi label={t("dashboard3.balance")} value={balance.balance} hint={balance.policy?.name} icon={Calendar03Icon} tone="warn" />}
+        {showTeam && <Kpi label={t("dashboard2.overdue")} value={overdue.length} icon={Alert02Icon} tone="red" />}
+      </div>
 
       {/* ───────────── personal ───────────── */}
       <Section title={t("dashboard4.personal")}>
-        <Card title={t("dashboard2.myTasks")} actions={tasks.length > 0 && <Link className="text-sm underline" href="/tasks">{t("dashboard2.allTasks")}</Link>}>
+        <Card title={t("dashboard2.myTasks")} actions={tasks.length > 0 && <Link className="text-sm font-medium text-red hover:text-red-strong" href="/tasks">{t("dashboard2.allTasks")}</Link>}>
           {tasks.length === 0 ? nothing : (
             <ul className="space-y-2 text-sm">
               {tasks.slice(0, 6).map((task) => (
@@ -108,14 +118,14 @@ export default async function DashboardPage() {
         </Card>
 
         {balance && (
-          <Card title={t("dashboard3.balance")} actions={<Link className="text-sm underline" href="/requests/new">{t("balance.request")}</Link>}>
-            <p className="font-display text-4xl font-semibold">{t("balance.days", { n: balance.balance })}</p>
+          <Card title={t("dashboard3.balance")} actions={<Link className="text-sm font-medium text-red hover:text-red-strong" href="/requests/new">{t("balance.request")}</Link>}>
+            <p className="text-[28px] leading-tight font-bold text-ink-2">{t("balance.days", { n: balance.balance })}</p>
             <p className="text-xs text-ink-mute">{balance.policy?.name ?? t("balance.noPolicy")}</p>
           </Card>
         )}
 
         {hasProfile && (
-          <Card title={t("dashboard4.myRequests")} actions={<Link className="text-sm underline" href="/requests?mine=initiated">{t("dashboard4.all")}</Link>}>
+          <Card title={t("dashboard4.myRequests")} actions={<Link className="text-sm font-medium text-red hover:text-red-strong" href="/requests?mine=initiated">{t("dashboard4.all")}</Link>}>
             {myRequests.length === 0 ? nothing : (
               <ul className="space-y-1.5 text-sm">
                 {myRequests.slice(0, 5).map((r) => (
@@ -132,7 +142,7 @@ export default async function DashboardPage() {
         )}
 
         {upcoming && (
-          <Card title={t("dashboard3.upcoming")} actions={<Link className="text-sm underline" href="/calendar">{t("nav.calendar")}</Link>}>
+          <Card title={t("dashboard3.upcoming")} actions={<Link className="text-sm font-medium text-red hover:text-red-strong" href="/calendar">{t("nav.calendar")}</Link>}>
             {upcomingItems.length === 0 ? nothing : (
               <ul className="space-y-1 text-sm">
                 {upcomingItems.map((i, n) => (
@@ -214,7 +224,7 @@ export default async function DashboardPage() {
           )}
 
           {teamRequests && (
-            <Card title={t("dashboard4.teamRequests")} actions={<Link className="text-sm underline" href="/requests">{t("dashboard4.all")}</Link>}>
+            <Card title={t("dashboard4.teamRequests")} actions={<Link className="text-sm font-medium text-red hover:text-red-strong" href="/requests">{t("dashboard4.all")}</Link>}>
               <ul className="flex flex-wrap gap-2">
                 {(["in_progress", "done", "rejected", "cancelled"] as const).map((s) => (
                   <li key={s}>
@@ -295,7 +305,7 @@ export default async function DashboardPage() {
                     <span className="truncate">
                       {d.name} <span className="text-xs text-ink-mute">· {d.company}</span>
                     </span>
-                    <span className="font-display text-lg">{d.count}</span>
+                    <span className="text-lg font-bold text-ink-2">{d.count}</span>
                   </li>
                 ))}
               </ul>
@@ -330,7 +340,7 @@ export default async function DashboardPage() {
                 {data.byCompany.map((c) => (
                   <li key={c.id} className="flex items-baseline justify-between border-b border-line pb-1">
                     <span className="font-medium">{c.name}</span>
-                    <span className="font-display text-2xl">{c.count}</span>
+                    <span className="text-2xl font-bold text-ink-2">{c.count}</span>
                   </li>
                 ))}
               </ul>
@@ -338,7 +348,7 @@ export default async function DashboardPage() {
           )}
 
           {paymentStatus && (
-            <Card title={t("dashboard4.paymentsStatus")} actions={<Link className="text-sm underline" href="/payments">{t("nav.payments")}</Link>}>
+            <Card title={t("dashboard4.paymentsStatus")} actions={<Link className="text-sm font-medium text-red hover:text-red-strong" href="/payments">{t("nav.payments")}</Link>}>
               {paymentStatus.length === 0 ? nothing : (
                 <ul className="space-y-1 text-sm">
                   {paymentStatus.map((p) => (
@@ -372,9 +382,9 @@ export default async function DashboardPage() {
           )}
 
           {costs && (
-            <Card title={t("dashboard2.licenses")} actions={<Link className="text-sm underline" href="/assets">{t("nav.assets")}</Link>}>
+            <Card title={t("dashboard2.licenses")} actions={<Link className="text-sm font-medium text-red hover:text-red-strong" href="/assets">{t("nav.assets")}</Link>}>
               {costs.length === 0 ? nothing : costs.map((c) => (
-                <p key={c.currency ?? "-"} className="font-display text-3xl font-semibold">
+                <p key={c.currency ?? "-"} className="text-[28px] leading-tight font-bold text-ink-2">
                   {c.currency ? formatMoney(c.total, c.currency, locale) : c.total}
                 </p>
               ))}
@@ -389,7 +399,7 @@ export default async function DashboardPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-8">
-      <h2 className="mb-3 text-xs font-semibold tracking-widest text-ink-mute uppercase">{title}</h2>
+      <h2 className="mb-3 text-xs font-medium tracking-wide text-ink-mute uppercase">{title}</h2>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{children}</div>
     </section>
   );

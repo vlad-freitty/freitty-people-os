@@ -66,7 +66,7 @@ export function ShiftsBoard({ shifts, canManage }: { shifts: ShiftDto[]; canMana
           </Button>
         </div>
       )}
-      <div className="overflow-x-auto rounded-xl border border-line bg-paper">
+      <div className="overflow-x-auto rounded-card border border-edge bg-paper">
         <table className="table">
           <thead>
             <tr>

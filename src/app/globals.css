@@ -1,61 +1,94 @@
 @import "tailwindcss";
 
-/* FREITTY brand tokens (PRD 9: Fraunces / Geist, cream, ink, red). Hex values are a first pass —
-   replace with the official brand book values when available. */
+/*
+ * Design tokens from the FREITTY "Client Cabinet" Figma file, page "Admin - Desktop" (node 145:2).
+ * Token names are kept from the first iteration so every component picks the new values up:
+ *   cream = content background, paper = cards, ink = text, line = dividers, red = brand accent.
+ */
 :root {
-  --cream: #f7f2e8;
-  --cream-deep: #efe7d6;
-  --paper: #fffdf8;
-  --ink: #16151a;
-  --ink-soft: #4a4852;
-  --ink-mute: #7d7a85;
-  --line: #e2d9c6;
-  --red: #e0263f;
-  --red-strong: #b81c32;
-  --red-tint: #fde8eb;
-  --ok: #1f7a4d;
-  --ok-tint: #e3f3ea;
-  --warn: #9a6100;
-  --warn-tint: #fdf1d8;
+  --cream: #f4f4f4; /* main-content background */
+  --cream-deep: #eaecf0; /* hover / subtle fills */
+  --paper: #ffffff;
+  --table-head: #f6f6f6;
+  --navy: #101828; /* sidebar */
+  --ink: #101828; /* primary text */
+  --ink-2: #1d243c; /* strong text in tables and numbers */
+  --ink-soft: #475467; /* secondary text */
+  --ink-mute: #6b7280; /* tertiary text */
+  --line: #eaecf0; /* dividers */
+  --edge: #e6e6ec; /* card borders */
+  --line-strong: #d0d5dd; /* button and input borders */
+  --red: #e3212d;
+  --red-strong: #c0252f;
+  --red-tint: #fce4e6; /* rgba(227, 33, 45, 0.12) on white */
+  --ok: #4e9e62;
+  --ok-strong: #067647;
+  --ok-tint: #edf5ef; /* rgba(78, 158, 98, 0.12) on white */
+  --warn: #e18c05;
+  --warn-tint: #fdf5e1;
+  --blue: #0052b4;
+  --blue-tint: #e0eaf6;
 }
 
 @theme inline {
   --color-cream: var(--cream);
   --color-cream-deep: var(--cream-deep);
   --color-paper: var(--paper);
+  --color-table-head: var(--table-head);
+  --color-navy: var(--navy);
   --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
   --color-ink-soft: var(--ink-soft);
   --color-ink-mute: var(--ink-mute);
   --color-line: var(--line);
+  --color-edge: var(--edge);
+  --color-line-strong: var(--line-strong);
   --color-red: var(--red);
   --color-red-strong: var(--red-strong);
   --color-red-tint: var(--red-tint);
   --color-ok: var(--ok);
+  --color-ok-strong: var(--ok-strong);
   --color-ok-tint: var(--ok-tint);
   --color-warn: var(--warn);
   --color-warn-tint: var(--warn-tint);
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-fraunces), Georgia, serif;
+  --color-blue: var(--blue);
+  --color-blue-tint: var(--blue-tint);
+  /* Satoshi has Latin only — Cyrillic falls back to Manrope (see CLAUDE.md) */
+  --font-sans: var(--font-satoshi), var(--font-cyrillic), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-satoshi), var(--font-cyrillic), ui-sans-serif, system-ui, sans-serif;
+  --radius-card: 18px;
 }
 
 body {
-  background: var(--cream);
+  background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
 }
 
+/* inputs: 40 px pills with a #D0D5DD border (sign-in form, search field) */
 .field {
-  @apply w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10 disabled:opacity-60;
+  @apply w-full rounded-full border border-line-strong bg-paper px-4 py-2 text-sm text-ink outline-none transition placeholder:text-ink-mute focus:border-ink focus:ring-2 focus:ring-ink/10 disabled:opacity-60;
+}
+textarea.field {
+  @apply rounded-2xl;
+}
+select.field {
+  @apply pr-8;
 }
 .label {
-  @apply mb-1 block text-xs font-medium tracking-wide text-ink-soft uppercase;
+  @apply mb-1 block text-xs font-medium tracking-wide text-ink uppercase;
 }
+
+/* tables: #F6F6F6 header, 12 px medium labels, 48 px rows with #EAECF0 dividers */
 .table {
   @apply w-full text-left text-sm;
 }
 .table th {
-  @apply border-b border-line px-3 py-2 text-xs font-medium tracking-wide text-ink-mute uppercase;
+  @apply border-b border-line bg-table-head px-3.5 py-2.5 text-xs font-medium text-ink-soft;
 }
 .table td {
-  @apply border-b border-line/70 px-3 py-2 align-top;
+  @apply border-b border-line px-3.5 py-3 align-middle;
+}
+.table tbody tr:last-child td {
+  @apply border-b-0;
 }

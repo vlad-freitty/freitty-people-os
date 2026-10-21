@@ -16,7 +16,7 @@ export function LocaleToggle() {
       router.refresh();
     });
   return (
-    <div role="group" aria-label={t("language")} className="flex overflow-hidden rounded-md border border-line text-xs font-medium">
+    <div role="group" aria-label={t("language")} className="flex h-11 items-center gap-0.5 rounded-full border border-line bg-[#f7f8fb] p-1 text-xs font-medium">
       {(["uk", "en"] as const).map((l) => (
         <button
           key={l}
@@ -24,7 +24,7 @@ export function LocaleToggle() {
           disabled={pending}
           onClick={() => set(l)}
           aria-pressed={locale === l}
-          className={`px-2.5 py-1 uppercase transition ${locale === l ? "bg-ink text-cream" : "bg-paper text-ink-soft hover:text-ink"}`}
+          className={`h-full rounded-full px-3 uppercase transition ${locale === l ? "bg-paper text-ink shadow-[0_1px_2px_rgba(16,24,40,0.08)]" : "text-ink-mute hover:text-ink"}`}
         >
           {l === "uk" ? "UA" : "EN"}
         </button>

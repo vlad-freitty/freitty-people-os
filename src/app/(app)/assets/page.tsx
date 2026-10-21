@@ -20,13 +20,13 @@ export default async function AssetsPage() {
       <PageTitle>{t("title")}</PageTitle>
       <div className="mb-6 flex flex-wrap gap-4">
         {costs.map((c) => (
-          <div key={c.currency ?? "-"} className="rounded-xl border border-line bg-paper p-4">
+          <div key={c.currency ?? "-"} className="rounded-card border border-edge bg-paper p-4">
             <p className="label">{t("licenseTotal")}</p>
-            <p className="font-display text-2xl">{c.currency ? formatMoney(c.total, c.currency, locale) : c.total}</p>
+            <p className="text-2xl font-bold text-ink-2">{c.currency ? formatMoney(c.total, c.currency, locale) : c.total}</p>
           </div>
         ))}
       </div>
-      <div className="mb-6 overflow-x-auto rounded-xl border border-line bg-paper">
+      <div className="mb-6 overflow-x-auto rounded-card border border-edge bg-paper">
         <table className="table">
           <thead>
             <tr>

@@ -30,7 +30,7 @@ export default async function SystemsPage() {
           <p className="mb-3 text-sm text-ink-soft">{t("bundleHint")}</p>
           <div className="space-y-5">
             {bundles.map((b) => (
-              <div key={b.id} className="rounded-lg border border-line p-3">
+              <div key={b.id} className="rounded-xl border border-line p-3">
                 <BundleForm systems={systems} initial={{ id: b.id, name: b.name, positionOrRole: b.positionOrRole, items: b.items }} />
               </div>
             ))}

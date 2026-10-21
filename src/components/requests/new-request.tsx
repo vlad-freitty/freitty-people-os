@@ -33,9 +33,9 @@ export function NewRequest({ types, lookups, initialTypeId }: { types: RequestTy
               key={x.id}
               type="button"
               onClick={() => (setTypeId(x.id), setValues({}), setError(null))}
-              className={`rounded-xl border p-4 text-left transition ${x.id === typeId ? "border-ink bg-paper shadow-sm" : "border-line bg-paper/60 hover:border-ink/40"}`}
+              className={`rounded-card border p-4 text-left transition ${x.id === typeId ? "border-ink bg-paper shadow-sm" : "border-line bg-paper/60 hover:border-ink/40"}`}
             >
-              <span className="font-display text-lg font-semibold">{localized(locale, x.nameUk, x.nameEn)}</span>
+              <span className="text-lg font-bold">{localized(locale, x.nameUk, x.nameEn)}</span>
               <span className="block text-xs text-ink-mute">{t(`templates.kinds.${x.kind}` as "templates.kinds.generic")}</span>
             </button>
           ))}

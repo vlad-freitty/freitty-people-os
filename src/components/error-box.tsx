@@ -12,7 +12,7 @@ export function ErrorBox({ error }: { error: unknown }) {
   const key = (KNOWN as readonly string[]).includes(code) ? (code as (typeof KNOWN)[number]) : "internal_error";
   const details = errorDetails(error);
   return (
-    <div role="alert" className="rounded-md border border-red/30 bg-red-tint px-3 py-2 text-sm text-red-strong">
+    <div role="alert" className="rounded-xl border border-red/30 bg-red-tint px-3 py-2 text-sm text-red-strong">
       <p className="font-medium">{t(key)}</p>
       {details.length > 0 && (
         <ul className="mt-1 list-disc pl-5 font-mono text-xs">

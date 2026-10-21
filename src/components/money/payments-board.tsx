@@ -104,7 +104,7 @@ export function PeriodActions({ periodId, status }: { periodId: string; status: 
       <ErrorBox error={error} />
       {count !== null && <p className="text-sm text-ok">{t("calculated", { n: count })}</p>}
       {warnings && warnings.length > 0 && (
-        <div className="rounded-md bg-warn-tint px-3 py-2 text-xs text-warn">
+        <div className="rounded-xl bg-warn-tint px-3 py-2 text-xs text-warn">
           <p className="font-medium">{t("warnings")}</p>
           <ul>
             {warnings.map((w, i) => (
@@ -123,7 +123,7 @@ export function PaymentsTable({ payments, canManage, periodLocked }: { payments:
   const t = useTranslations("payments");
   if (payments.length === 0) return <p className="text-sm text-ink-mute">{t("empty")}</p>;
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-paper">
+    <div className="overflow-x-auto rounded-card border border-edge bg-paper">
       <table className="table">
         <thead>
           <tr>

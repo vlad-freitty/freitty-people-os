@@ -15,7 +15,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageTitle>{t("audit.title")}</PageTitle>
-      <div className="overflow-x-auto rounded-xl border border-line bg-paper">
+      <div className="overflow-x-auto rounded-card border border-edge bg-paper">
         <table className="table">
           <thead>
             <tr>

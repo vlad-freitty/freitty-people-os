@@ -74,7 +74,7 @@ export function RoleMatrix({ roles, catalog, canManage }: { roles: Role[]; catal
   return (
     <div className="space-y-3">
       <ErrorBox error={error} />
-      <div className="overflow-x-auto rounded-xl border border-line bg-paper">
+      <div className="overflow-x-auto rounded-card border border-edge bg-paper">
         <table className="table min-w-[720px]">
           <thead>
             <tr>
@@ -250,7 +250,7 @@ export function UsersTable({ users, roles, isSuperadmin }: { users: UserRow[]; r
   return (
     <div className="space-y-3">
       <ErrorBox error={error} />
-      <div className="overflow-x-auto rounded-xl border border-line bg-paper">
+      <div className="overflow-x-auto rounded-card border border-edge bg-paper">
         <table className="table">
           <thead>
             <tr>

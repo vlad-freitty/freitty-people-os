@@ -68,7 +68,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
             // eslint-disable-next-line @next/next/no-img-element
             <img src={e.photo} alt="" className="h-14 w-14 rounded-full object-cover" />
           ) : (
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-ink font-display text-xl text-cream">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-cream-deep text-xl font-bold text-ink">
               {e.firstName[0]}
               {e.lastName[0]}
             </span>
@@ -113,7 +113,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
         {e.access === "sensitive" && (
           <Card title={t("employee.rates")}>
             <p className="label">{t("employee.currentRate")}</p>
-            <p className="mb-4 font-display text-2xl">
+            <p className="mb-4 text-2xl font-bold text-ink-2">
               {e.currentRate ? (
                 <>
                   {formatMoney(e.currentRate.amount, e.currentRate.currency, locale)}
@@ -162,7 +162,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
           <div className="grid gap-6 lg:grid-cols-[1fr_2fr_2fr]">
             <div>
               <p className="label">{t("balance.balance")}</p>
-              <p className="font-display text-4xl font-semibold">{t("balance.days", { n: balance.balance })}</p>
+              <p className="text-[28px] leading-tight font-bold text-ink-2">{t("balance.days", { n: balance.balance })}</p>
               <p className="mt-1 text-xs text-ink-mute">
                 {balance.policy ? `${t("balance.policy")}: ${balance.policy.name}` : t("balance.noPolicy")}
               </p>

@@ -222,7 +222,7 @@ function ImportBox({ layerId, onDone }: { layerId: string; onDone: () => void })
       }
     });
   return (
-    <details className="rounded-lg border border-line p-3">
+    <details className="rounded-xl border border-line p-3">
       <summary className="cursor-pointer text-sm font-medium">{t("import")}</summary>
       <div className="mt-3 space-y-2">
         <p className="text-xs text-ink-mute">{t("importHint")}</p>

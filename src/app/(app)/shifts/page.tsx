@@ -32,7 +32,7 @@ export default async function ShiftsPage({ searchParams }: { searchParams: Promi
   return (
     <>
       <PageTitle>{t("title")}</PageTitle>
-      <form className="mb-5 flex flex-wrap items-end gap-3 rounded-xl border border-line bg-paper p-4">
+      <form className="mb-5 flex flex-wrap items-end gap-3 rounded-card border border-edge bg-paper p-4">
         <label className="text-sm">
           <span className="label">{t("from")}</span>
           <input className="field" type="date" name="from" defaultValue={from} />

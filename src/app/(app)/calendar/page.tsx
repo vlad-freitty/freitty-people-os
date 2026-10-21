@@ -49,13 +49,13 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       <PageTitle
         actions={
           <div className="flex gap-2 text-sm">
-            <Link className="rounded-md bg-paper px-3 py-1.5 hover:bg-cream-deep" href={`/calendar?month=${shiftMonth(month, -1)}`}>
+            <Link className="rounded-xl bg-paper px-3 py-1.5 hover:bg-cream-deep" href={`/calendar?month=${shiftMonth(month, -1)}`}>
               {t("prev")}
             </Link>
-            <Link className="rounded-md bg-paper px-3 py-1.5 hover:bg-cream-deep" href="/calendar">
+            <Link className="rounded-xl bg-paper px-3 py-1.5 hover:bg-cream-deep" href="/calendar">
               {t("today")}
             </Link>
-            <Link className="rounded-md bg-paper px-3 py-1.5 hover:bg-cream-deep" href={`/calendar?month=${shiftMonth(month, 1)}`}>
+            <Link className="rounded-xl bg-paper px-3 py-1.5 hover:bg-cream-deep" href={`/calendar?month=${shiftMonth(month, 1)}`}>
               {t("next")}
             </Link>
           </div>
@@ -69,7 +69,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         {days
           .filter((d) => d >= first && d <= last && (byDate.get(d)?.length ?? 0) > 0)
           .map((d) => (
-            <li key={d} className={`rounded-xl border bg-paper p-3 ${d === today ? "border-red" : "border-line"}`}>
+            <li key={d} className={`rounded-card border bg-paper p-3 ${d === today ? "border-red" : "border-line"}`}>
               <p className="label">{new Intl.DateTimeFormat(locale === "uk" ? "uk-UA" : "en-US", { weekday: "short", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${d}T00:00:00Z`))}</p>
               <ul className="space-y-1">
                 {(byDate.get(d) ?? []).map((i, n) => (
@@ -84,7 +84,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           ))}
       </ul>
 
-      <div className="hidden overflow-x-auto rounded-xl border border-line bg-paper sm:block">
+      <div className="hidden overflow-x-auto rounded-card border border-edge bg-paper sm:block">
         <div className="grid min-w-[720px] grid-cols-7">
           {weekdays.map((w) => (
             <div key={w} className="border-b border-line px-2 py-1.5 text-xs font-medium tracking-wide text-ink-mute uppercase">

@@ -8,7 +8,7 @@ export default function AppError({ reset }: { error: Error & { digest?: string }
   const t = useTranslations("errorPage");
   return (
     <div className="flex min-h-[50vh] max-w-md flex-col items-start justify-center gap-3">
-      <h1 className="font-display text-2xl font-semibold">{t("errorTitle")}</h1>
+      <h1 className="text-2xl font-bold">{t("errorTitle")}</h1>
       <p className="text-sm text-ink-soft">{t("errorText")}</p>
       <div className="flex gap-2">
         <Button onClick={reset}>{t("retry")}</Button>

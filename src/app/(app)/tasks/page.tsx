@@ -20,7 +20,7 @@ export default async function TasksPage() {
             <li key={task.stepId}>
               <Link
                 href={`/requests/${task.requestId}`}
-                className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-paper p-4 transition hover:border-ink ${task.overdue ? "border-red/50" : "border-line"}`}
+                className={`flex flex-wrap items-center justify-between gap-3 rounded-card border bg-paper p-4 transition hover:border-ink ${task.overdue ? "border-red/50" : "border-line"}`}
               >
                 <span>
                   <span className="font-medium">{localized(locale, task.nameUk, task.nameEn)}</span>

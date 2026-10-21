@@ -24,7 +24,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         {t("employees.title")}
       </PageTitle>
 
-      <form className="mb-5 grid gap-3 rounded-xl border border-line bg-paper p-4 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+      <form className="mb-5 grid gap-3 rounded-card border border-edge bg-paper p-4 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
         <input name="q" defaultValue={sp.q} placeholder={t("employees.searchPlaceholder")} className="field" aria-label={t("common.search")} />
         <select name="companyId" defaultValue={sp.companyId ?? ""} className="field" aria-label={t("employees.filterCompany")}>
           <option value="">{t("employees.filterCompany")}: {t("common.all")}</option>
@@ -48,7 +48,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
       </form>
 
       <p className="mb-2 text-sm text-ink-mute">{t("employees.count", { count: employees.length })}</p>
-      <div className="overflow-x-auto rounded-xl border border-line bg-paper">
+      <div className="overflow-x-auto rounded-card border border-edge bg-paper">
         <table className="table">
           <thead>
             <tr>

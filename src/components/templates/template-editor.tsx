@@ -159,7 +159,7 @@ export function TemplateEditor({ template, people, roles, childTypes, department
 
   return (
     <div className="space-y-6">
-      {ro && <p className="rounded-md bg-warn-tint px-3 py-2 text-sm text-warn">{t("readOnly")}</p>}
+      {ro && <p className="rounded-xl bg-warn-tint px-3 py-2 text-sm text-warn">{t("readOnly")}</p>}
       {template.editingVersion && (
         <p className="text-sm text-ink-soft">
           {t("editing", { v: template.editingVersion.version, status: t(`versionStatus.${template.editingVersion.status}`) })} ·{" "}
@@ -189,7 +189,7 @@ export function TemplateEditor({ template, people, roles, childTypes, department
       <Card title={t("fields")}>
         <fieldset disabled={ro} className="space-y-3">
           {content.fields.map((f, i) => (
-            <div key={i} className="rounded-lg border border-line p-3">
+            <div key={i} className="rounded-xl border border-line p-3">
               <div className="grid gap-3 sm:grid-cols-[1fr_1.5fr_1.5fr_1fr_auto]">
                 <Field label={t("key")}>
                   <input className="field font-mono text-xs" value={f.key} onChange={(e) => setField(i, { key: e.target.value })} />
@@ -239,9 +239,9 @@ export function TemplateEditor({ template, people, roles, childTypes, department
         <p className="mb-4 text-sm text-ink-soft">{t("groupsHint")}</p>
         <fieldset disabled={ro} className="space-y-5">
           {groups.map((g, gi) => (
-            <div key={g} className="rounded-xl border border-line bg-cream/40 p-4">
+            <div key={g} className="rounded-card border border-line bg-cream/40 p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-display text-base font-semibold">{t("group", { n: gi + 1 })}</h3>
+                <h3 className="text-base font-bold">{t("group", { n: gi + 1 })}</h3>
                 <div className="flex gap-1">
                   <Button type="button" variant="ghost" className="px-2" title={t("moveUp")} onClick={() => moveGroup(g, -1)}>
                     ↑
@@ -287,7 +287,7 @@ export function TemplateEditor({ template, people, roles, childTypes, department
       {/* ── save / publish ── */}
       <div className="sticky bottom-0 -mx-4 space-y-3 border-t border-line bg-cream/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6">
         {errors.length > 0 ? (
-          <div className="rounded-md bg-red-tint px-3 py-2 text-sm text-red-strong">
+          <div className="rounded-xl bg-red-tint px-3 py-2 text-sm text-red-strong">
             <p className="font-medium">{t("errors")}</p>
             <ul className="list-disc pl-5 font-mono text-xs">
               {errors.map((e) => (
@@ -400,7 +400,7 @@ function StepEditor({
   const earlier = groupNumbers.filter((g) => g < step.orderGroup);
 
   return (
-    <div className="rounded-lg border border-line bg-paper p-3">
+    <div className="rounded-xl border border-line bg-paper p-3">
       <div className="grid gap-3 sm:grid-cols-[2fr_2fr_1.3fr_auto]">
         <Field label={t("stepName")}>
           <input className="field" value={step.nameUk} onChange={(e) => onChange({ nameUk: e.target.value })} />

@@ -48,7 +48,7 @@ export function StepActions({ step, fields, lookups }: { step: Step; fields: Fie
   const act = (body: unknown) => run(() => api(`/steps/${step.id}`, { body }));
 
   return (
-    <div className="mt-3 space-y-3 rounded-lg border border-ink/15 bg-cream/70 p-3">
+    <div className="mt-3 space-y-3 rounded-xl border border-ink/15 bg-cream/70 p-3">
       <ErrorBox error={error} />
 
       {step.stepType === "approve" && (

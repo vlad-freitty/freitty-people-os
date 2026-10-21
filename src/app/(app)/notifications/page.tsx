@@ -24,7 +24,7 @@ export default async function NotificationsPage() {
             <li key={n.id}>
               <Link
                 href={`/requests/${n.payload.requestId}`}
-                className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 transition hover:border-ink ${n.readAt ? "border-line bg-paper/60" : "border-ink/30 bg-paper"}`}
+                className={`flex flex-wrap items-center justify-between gap-2 rounded-card border p-3 transition hover:border-ink ${n.readAt ? "border-line bg-paper/60" : "border-ink/30 bg-paper"}`}
               >
                 <span className="min-w-0">
                   <Badge tone={TONE[n.type]}>{t(`types.${n.type}`)}</Badge>{" "}
