@@ -239,6 +239,7 @@ async function activateGroup(tx: Tx, actor: Actor | null, r: LoadedRequest, grou
     r.version.requestType.kind === "hiring" && typeof values.department === "string" ? values.department : (r.subject?.departmentId ?? null);
   const now = new Date();
 
+  const taken: string[] = [];
   for (const tpl of r.version.steps.filter((s) => s.orderGroup === group)) {
     const targets: { systemId: string | null; ownerId?: string | null }[] =
       tpl.assigneeRule === "system_owner" ? await systemsForStep(tx, r, values) : [{ systemId: null }];
@@ -254,7 +255,9 @@ async function activateGroup(tx: Tx, actor: Actor | null, r: LoadedRequest, grou
         subjectEmployeeId: r.subjectEmployeeId,
         subjectDepartmentId,
         systemOwnerId: target.ownerId,
+        exceptIds: taken,
       });
+      if (assigneeId) taken.push(assigneeId);
       const step = await tx.stepInstance.create({
         data: {
           requestId: r.id,

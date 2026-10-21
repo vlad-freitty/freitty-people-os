@@ -7,6 +7,7 @@ import { localized } from "@/lib/format";
 import { api } from "../api";
 import { ErrorBox } from "../error-box";
 import { Button, Card } from "../ui";
+import { AbsenceInsightPreview } from "./absence-insight";
 import { FieldInput, type FieldDef, type Lookups } from "./field-input";
 
 type RequestTypeDef = { id: string; nameUk: string; nameEn: string | null; kind: string; fields: FieldDef[] };
@@ -64,6 +65,7 @@ export function NewRequest({ types, lookups, initialTypeId }: { types: RequestTy
             {type.fields.map((f) => (
               <FieldInput key={f.key} field={f} value={values[f.key]} lookups={lookups} onChange={(v) => setValues((s) => ({ ...s, [f.key]: v }))} />
             ))}
+            {type.kind === "absence" && <AbsenceInsightPreview values={values} />}
             <Button type="submit" disabled={pending}>
               {t("requests.submit")}
             </Button>

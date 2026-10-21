@@ -7,7 +7,7 @@ import { currentBalance, syncBalance } from "@/server/absences/balance";
 import { countAbsenceDays, loadPerson } from "@/server/calendar/core";
 import { parseIcs } from "@/server/calendar/ics";
 import { actOnStep, startRequest } from "@/server/requests/engine";
-import { adjustBalance, getBalance, runDailyBalances } from "@/server/services/absences";
+import { adjustBalance, getBalances, runDailyBalances } from "@/server/services/absences";
 import { calendarFeed, calendarFeedUrl, calendarView, importEvents } from "@/server/services/calendar";
 import { ensureAbsenceTypes, ensureHolidayLayer, ensureSystemLayers, FREITTY_STANDARD, HOLIDAYS } from "@/server/seed/calendar";
 import { activeSteps, buildEngineWorld } from "./engine-world";
@@ -26,8 +26,8 @@ beforeEach(async () => {
   await ensureSystemLayers(prisma);
   await ensureAbsenceTypes(prisma);
   types = Object.fromEntries((await prisma.absenceType.findMany()).map((t) => [t.code, t.id]));
-  standardId = (await prisma.absencePolicy.create({ data: FREITTY_STANDARD })).id;
-  await prisma.company.update({ where: { id: w.companies.a.id }, data: { absencePolicyId: standardId } });
+  standardId = (await prisma.absencePolicy.create({ data: { ...FREITTY_STANDARD, absenceTypeId: types.vacation } })).id;
+  await prisma.absencePolicyAssignment.create({ data: { policyId: standardId, absenceTypeId: types.vacation, companyId: w.companies.a.id } });
 
   const columbus = await prisma.location.create({ data: { name: "Columbus, OH", country: "US", state: "Ohio", timezone: "America/New_York" } });
   const role = await prisma.role.findUniqueOrThrow({ where: { code: "user" } });
@@ -75,9 +75,9 @@ describe("policy «10 днів, згорають у річницю найму»"
     await prisma.employee.update({ where: { id: P.id }, data: { hireDate: parseIsoDate("2025-03-10") } });
 
     await syncBalance(prisma, P.id, at("2025-03-10"));
-    expect(await currentBalance(prisma, P.id)).toBe(10);
+    expect(await currentBalance(prisma, P.id, types.vacation)).toBe(10);
     await syncBalance(prisma, P.id, at("2026-03-09"));
-    expect(await currentBalance(prisma, P.id)).toBe(10); // the day before the anniversary nothing has burnt
+    expect(await currentBalance(prisma, P.id, types.vacation)).toBe(10); // the day before the anniversary nothing has burnt
 
     await syncBalance(prisma, P.id, at("2026-03-10"));
     await syncBalance(prisma, P.id, at("2026-03-10")); // the daily job may run twice
@@ -86,7 +86,7 @@ describe("policy «10 днів, згорають у річницю найму»"
       ["accrual", 10, "2026-03-10"],
       ["expiry", -10, "2026-03-10"],
     ]);
-    expect(await currentBalance(prisma, P.id)).toBe(10);
+    expect(await currentBalance(prisma, P.id, types.vacation)).toBe(10);
   });
 
   it("only the unused part burns", async () => {
@@ -131,22 +131,23 @@ describe("policy «10 днів, згорають у річницю найму»"
 
 describe("other policy settings", () => {
   async function withPolicy(data: Partial<typeof FREITTY_STANDARD> & Record<string, unknown>, hire: string) {
-    const policy = await prisma.absencePolicy.create({ data: { ...FREITTY_STANDARD, name: `p-${Math.random()}`, ...data } });
+    const policy = await prisma.absencePolicy.create({ data: { ...FREITTY_STANDARD, absenceTypeId: types.vacation, name: `p-${Math.random()}`, ...data } });
     const { P } = w.people;
-    await prisma.employee.update({ where: { id: P.id }, data: { hireDate: parseIsoDate(hire), absencePolicyId: policy.id } });
+    await prisma.employee.update({ where: { id: P.id }, data: { hireDate: parseIsoDate(hire) } });
+    await prisma.absencePolicyAssignment.create({ data: { policyId: policy.id, absenceTypeId: types.vacation, employeeId: P.id } });
     return P.id;
   }
 
   it("monthly accrual from 1 January: 12 days a year, 1 per month", async () => {
     const id = await withPolicy({ daysPerPeriod: 12, accrual: "monthly", periodStart: "jan_1" } as never, "2026-01-01");
     await syncBalance(prisma, id, at("2026-03-15"));
-    expect(await currentBalance(prisma, id)).toBe(3);
+    expect(await currentBalance(prisma, id, types.vacation)).toBe(3);
   });
 
   it("a partial first year on jan_1 + upfront is pro-rated to half days", async () => {
     const id = await withPolicy({ periodStart: "jan_1" } as never, "2026-07-01");
     await syncBalance(prisma, id, at("2026-07-01"));
-    expect(await currentBalance(prisma, id)).toBe(5); // 184/365 of 10 → 5.0
+    expect(await currentBalance(prisma, id, types.vacation)).toBe(5); // 184/365 of 10 → 5.0
   });
 
   it("carryover keeps up to N days, the rest burns", async () => {
@@ -155,15 +156,15 @@ describe("other policy settings", () => {
     const b = await prisma.absenceBalance.findFirstOrThrow({ where: { employeeId: id } });
     await prisma.absenceLedgerEntry.create({ data: { balanceId: b.id, type: "usage", amount: -5, date: parseIsoDate("2025-04-01") } });
     await syncBalance(prisma, id, at("2026-03-10"));
-    expect(await currentBalance(prisma, id)).toBe(13);
-    const types = (await ledger(id)).map((e) => `${e[0]}:${e[1]}`);
-    expect(types).toEqual(expect.arrayContaining(["carryover:-3", "carryover:3", "expiry:-2"]));
+    expect(await currentBalance(prisma, id, types.vacation)).toBe(13);
+    const kinds = (await ledger(id)).map((e) => `${e[0]}:${e[1]}`);
+    expect(kinds).toEqual(expect.arrayContaining(["carryover:-3", "carryover:3", "expiry:-2"]));
   });
 
   it("'never' keeps everything", async () => {
     const id = await withPolicy({ expiry: "never" } as never, "2024-03-10");
     await syncBalance(prisma, id, at("2026-03-10"));
-    expect(await currentBalance(prisma, id)).toBe(30);
+    expect(await currentBalance(prisma, id, types.vacation)).toBe(30);
   });
 });
 
@@ -184,49 +185,52 @@ describe("non-working days are not deducted", () => {
 
   it("a vacation through the request engine deducts working days only", async () => {
     const { U, H } = w.people;
-    await prisma.employee.update({ where: { id: U.id }, data: { hireDate: parseIsoDate("2025-01-15") } });
+    // U is a contractor in the base world; contractors have no PTO balance (phase 6)
+    await prisma.employee.update({ where: { id: U.id }, data: { hireDate: parseIsoDate("2025-01-15"), employmentType: "employee" } });
     const ohioPerson = await loadPerson(prisma, ohio.id);
     // in Ohio, Thanksgiving (26 Nov) is non-working
     expect(await countAbsenceDays(prisma, ohioPerson, "2026-11-25", "2026-11-27", { halfDay: false, mode: "working" })).toBe(2);
 
     const user = await actorFor(U);
-    const before = (await getBalance(user, U.id)).balance;
+    const vacationBalance = async () => (await getBalances(user, U.id)).balances.find((b) => b.type.code === "vacation")!.balance;
+    const before = await vacationBalance();
     const { id } = await startRequest(user, { requestTypeId: w.templates.absence, values: { absence_type: types.vacation, dates: { from: "2026-12-04", to: "2026-12-07" } } });
-    const approval = (await activeSteps(id))[0];
-    expect(approval.assigneeId).toBe(H.id);
-    await actOnStep(w.actors.H, approval.id, { action: "approve" });
+    // two approvals of one group: the direct manager (no manager set → the department head) and Head of People
+    // (nobody has that role in the test world → CEO)
+    const [manager, hop] = await activeSteps(id);
+    expect(manager.assigneeId).toBe(H.id);
+    expect(hop.assigneeId).toBe(w.people.C.id);
+    await actOnStep(w.actors.H, manager.id, { action: "approve" });
+    expect(await prisma.absence.count({ where: { employeeId: U.id } })).toBe(0); // not approved until both confirm
+    await actOnStep(w.actors.C, hop.id, { action: "approve" });
 
     const absence = await prisma.absence.findFirstOrThrow({ where: { employeeId: U.id } });
     expect(Number(absence.days)).toBe(2); // Fri + Mon
-    expect((await getBalance(user, U.id)).balance).toBe(before - 2);
+    expect(await vacationBalance()).toBe(before - 2);
   });
 
-  it("sick leave needs a document and no approval; it does not touch the balance", async () => {
+  it("sick leave needs no document and no approval (phase 6); without a policy it does not touch any balance", async () => {
     const { U } = w.people;
     await prisma.employee.update({ where: { id: U.id }, data: { hireDate: parseIsoDate("2025-01-15") } });
     const user = await actorFor(U);
-    await expect(
-      startRequest(user, { requestTypeId: w.templates.absence, values: { absence_type: types.sick_leave, dates: { from: "2026-11-02", to: "2026-11-03" } } }),
-    ).rejects.toMatchObject({ details: { document: "required_for_type" } });
-
-    const { uploadFormFile } = await import("@/server/services/files");
-    const file = await uploadFormFile(user, { name: "sick.pdf", type: "application/pdf", data: Buffer.from("%PDF fake") });
-    const before = (await getBalance(user, U.id)).balance;
-    const { id } = await startRequest(user, {
-      requestTypeId: w.templates.absence,
-      values: { absence_type: types.sick_leave, dates: { from: "2026-11-02", to: "2026-11-03" }, document: file },
-    });
+    const { id } = await startRequest(user, { requestTypeId: w.templates.absence, values: { absence_type: types.sick_leave, dates: { from: "2026-11-02", to: "2026-11-03" } } });
     expect((await prisma.request.findUniqueOrThrow({ where: { id } })).status).toBe("done");
-    expect(await prisma.document.count({ where: { employeeId: U.id, requestId: id } })).toBe(1);
-    expect((await getBalance(user, U.id)).balance).toBe(before);
+    expect(await prisma.absence.count({ where: { employeeId: U.id, typeId: types.sick_leave } })).toBe(1);
+    expect(await prisma.absenceLedgerEntry.count({ where: { type: "usage" } })).toBe(0);
   });
 
-  it("not enough balance is refused when the request is created", async () => {
+  it("not enough balance does not block the request (phase 6) — it is a warning", async () => {
     const { U } = w.people;
     await prisma.employee.update({ where: { id: U.id }, data: { hireDate: parseIsoDate("2025-01-15") } });
     const user = await actorFor(U);
+    const { id } = await startRequest(user, { requestTypeId: w.templates.absence, values: { absence_type: types.vacation, dates: { from: "2026-11-02", to: "2026-11-20" } } });
+    expect((await prisma.request.findUniqueOrThrow({ where: { id } })).status).toBe("in_progress");
+  });
+
+  it("broken dates are still refused", async () => {
+    const user = await actorFor(w.people.U);
     await expect(
-      startRequest(user, { requestTypeId: w.templates.absence, values: { absence_type: types.vacation, dates: { from: "2026-11-02", to: "2026-11-20" } } }),
+      startRequest(user, { requestTypeId: w.templates.absence, values: { absence_type: types.vacation, dates: { from: "2026-11-20", to: "2026-11-02" } } }),
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
@@ -234,9 +238,10 @@ describe("non-working days are not deducted", () => {
     const { H } = w.people;
     await prisma.employee.update({ where: { id: H.id }, data: { hireDate: parseIsoDate("2025-01-15") } });
     const { id } = await startRequest(w.actors.H, { requestTypeId: w.templates.absence, values: { absence_type: types.day_off, dates: { from: "2026-11-02", to: "2026-11-02" } } });
-    const step = (await activeSteps(id))[0];
-    expect(step.assigneeId).not.toBe(H.id);
-    expect(step.status).toBe("needs_assignment"); // CS has no parent department in the test world
+    const [manager, hop] = await activeSteps(id);
+    expect(manager.assigneeId).not.toBe(H.id);
+    expect(manager.status).toBe("needs_assignment"); // CS has no parent department in the test world
+    expect(hop.assigneeId).toBe(w.people.C.id);
   });
 });
 
@@ -311,9 +316,9 @@ describe("import and adjustments", () => {
   it("manual adjustment: superadmin only, with a comment, audited", async () => {
     const { P } = w.people;
     await prisma.employee.update({ where: { id: P.id }, data: { hireDate: parseIsoDate("2025-01-15") } });
-    await expect(adjustBalance(w.actors.H, P.id, { amount: 2, comment: "x" })).rejects.toBeInstanceOf(ForbiddenError);
-    await expect(adjustBalance(w.actors.S, P.id, { amount: 2 })).rejects.toThrow();
-    const res = await adjustBalance(w.actors.S, P.id, { amount: 2.5, comment: "Початковий залишок" });
+    await expect(adjustBalance(w.actors.H, P.id, { absenceTypeId: types.vacation, amount: 2, comment: "x" })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(adjustBalance(w.actors.S, P.id, { absenceTypeId: types.vacation, amount: 2 })).rejects.toThrow();
+    const res = await adjustBalance(w.actors.S, P.id, { absenceTypeId: types.vacation, amount: 2.5, comment: "Початковий залишок" });
     expect(res.balance).toBe(12.5);
     expect(await prisma.auditLog.count({ where: { action: "balance.adjust" } })).toBe(1);
   });

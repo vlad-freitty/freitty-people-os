@@ -18,7 +18,7 @@ export const stepDraft = z.object({
   nameUk: z.string().trim().min(1).max(200),
   nameEn: z.string().trim().max(200).nullish(),
   stepType: z.enum(["approve", "task", "fill", "document", "child_request"]),
-  assigneeRule: z.enum(["person", "initiator", "initiator_dept_head", "subject_dept_head", "system_owner", "role_first_free"]),
+  assigneeRule: z.enum(["person", "initiator", "initiator_dept_head", "subject_dept_head", "subject_manager", "system_owner", "role_first_free"]),
   assigneeValue: z.string().trim().nullish(),
   slaDays: z.number().int().min(0).max(365),
   checklist: checklistSchema.nullish(),
@@ -87,7 +87,7 @@ export async function validateTemplate(tx: Tx, kind: RequestKind, content: Draft
     if (s.assigneeRule === "system_owner" && !hasSystemsField && kind !== "offboarding") {
       errors.push(`${label}: "system owner" needs a systems field (or kind offboarding)`);
     }
-    if (s.assigneeRule === "subject_dept_head" && !keys.has("employee") && kind !== "hiring" && kind !== "absence") {
+    if ((s.assigneeRule === "subject_dept_head" || s.assigneeRule === "subject_manager") && !keys.has("employee") && kind !== "hiring" && kind !== "absence") {
       errors.push(`${label}: "head of the employee's department" needs a person field "employee"`);
     }
     if (s.stepType === "fill") {

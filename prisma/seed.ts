@@ -1,9 +1,9 @@
 // Fake data only (PRD 9, rule 4): names are invented, emails use the reserved example.test domain.
 import { PrismaClient, type EmploymentType, type RateType } from "@prisma/client";
 import { ensureSystemRoles } from "../src/server/seed/roles";
-import { seedStarterTemplates } from "../src/server/seed/templates";
+import { seedStarterTemplates, upgradeStarterTemplates } from "../src/server/seed/templates";
 import { zonedTimeToUtc } from "../src/server/requests/sla";
-import { ensureAbsenceTypes, ensureHolidayLayer, ensureSystemLayers, FREITTY_STANDARD, HOLIDAYS } from "../src/server/seed/calendar";
+import { ensureAbsenceTypes, ensureHolidayLayer, ensurePtoPolicies, ensureSystemLayers, HOLIDAYS } from "../src/server/seed/calendar";
 
 const prisma = new PrismaClient();
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
@@ -190,12 +190,10 @@ async function main() {
       ],
     });
   }
-  // Phase 2: calendars, absence types, the standard policy for every company
+  // Phase 2 + 6: calendars, PTO types and a default policy per type (applies to every employee, not contractors)
   await ensureSystemLayers(prisma);
   await ensureAbsenceTypes(prisma);
-  const standard =
-    (await prisma.absencePolicy.findUnique({ where: { name: FREITTY_STANDARD.name } })) ?? (await prisma.absencePolicy.create({ data: FREITTY_STANDARD }));
-  await prisma.company.updateMany({ where: { absencePolicyId: null }, data: { absencePolicyId: standard.id } });
+  await ensurePtoPolicies(prisma);
   await ensureHolidayLayer(prisma, {
     nameUk: "Свята Україна",
     nameEn: "Ukraine public holidays",
@@ -213,6 +211,7 @@ async function main() {
     assign: [{ targetType: "location", targetId: locations["Columbus, OH"] }],
   });
   await seedStarterTemplates(prisma);
+  await upgradeStarterTemplates(prisma);
 
   // Phase 3: a few confirmed shifts of the CS agents in October 2026 and the open October period of FREITTY
   if ((await prisma.shift.count()) === 0) {

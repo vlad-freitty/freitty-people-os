@@ -109,7 +109,8 @@
     "effectiveTo": "Effective to",
     "rateHint": "Rates are never edited: a new rate closes the previous one the day before.",
     "noRates": "No rates yet",
-    "deleteConfirm": "Delete this profile? The record will be marked as deleted."
+    "deleteConfirm": "Delete this profile? The record will be marked as deleted.",
+    "grade": "Grade"
   },
   "status": {
     "candidate": "Candidate",
@@ -385,7 +386,8 @@
     "initiator_dept_head": "Head of initiator's department",
     "subject_dept_head": "Head of employee's department",
     "system_owner": "System owner (one step per system)",
-    "role_first_free": "First free person with role"
+    "role_first_free": "First free person with role",
+    "subject_manager": "The employee's direct manager (or department head)"
   },
   "templates": {
     "title": "Request templates",
@@ -626,7 +628,8 @@
     "periodStart": "Period starts",
     "periodStarts": {
       "hire_date": "hire date",
-      "jan_1": "1 January"
+      "jan_1": "1 January",
+      "month": "calendar month"
     },
     "expiry": "Expiry",
     "expiries": {
@@ -646,7 +649,14 @@
     "assignPolicy": "Policy assignment",
     "noPolicy": "— not assigned —",
     "inheritedPolicy": "inherited",
-    "employees": "people"
+    "employees": "people",
+    "countsAsWorking": "Working day (remote)",
+    "policyType": "Absence type",
+    "isDefault": "Default for all employees",
+    "default": "default",
+    "inheritPolicy": "— inherit —",
+    "policiesHint": "Each policy counts one type. The default one applies to every employee unless a company, department or person has another one. Contractors have no PTO.",
+    "assignHint": "The most specific assignment wins: person → department (and sub-departments) → company → the type's default policy."
   },
   "balance": {
     "title": "Time off",
@@ -670,7 +680,12 @@
     "amount": "Days (+/−)",
     "comment": "Comment (required)",
     "apply": "Apply",
-    "request": "Request time off"
+    "request": "Request time off",
+    "notEligible": "PTO is not part of the engagement terms",
+    "noTypes": "No absence types with a balance are configured",
+    "until": "use by {date}",
+    "thisMonthUntil": "this month, by {date}",
+    "type": "Type"
   },
   "dashboard3": {
     "balance": "Time-off balance",
@@ -848,5 +863,29 @@
     "newRequest": "New request",
     "searchPlaceholder": "Search people by name or email",
     "closeMenu": "Close menu"
+  },
+  "absenceInsight": {
+    "title": "For approval",
+    "last": "Since the last absence of this type: {n} days ({from} — {to})",
+    "lastNone": "No earlier absences of this type",
+    "days": "Requested: {n} days",
+    "balance": "balance of this type: {n} days",
+    "hint": "Warnings never block the request — the approvers decide.",
+    "warnings": {
+      "min_days": "Below the minimum for this type ({n} days)",
+      "max_days": "Above the maximum for this type ({n} days)",
+      "available_from": "By length of service this type is available from {date}",
+      "not_enough_balance": "Not enough balance: {balance} days left",
+      "document_missing": "No document attached",
+      "no_policy": "No policy for this type — no balance is counted",
+      "not_eligible": "Contractor: no PTO, the absence is only recorded",
+      "no_hire_date": "No start date — no balance is counted"
+    }
+  },
+  "grade": {
+    "senior_management": "Senior Management",
+    "middle_management": "Middle Management",
+    "first_line_management": "First-line Management",
+    "individual_contributor": "Individual Contributor"
   }
 }

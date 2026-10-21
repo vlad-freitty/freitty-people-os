@@ -36,6 +36,7 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ i
             position: e.position,
             managerId: e.manager?.id ?? "",
             employmentType: e.employmentType,
+            grade: e.grade ?? "",
             hireDate: e.hireDate ?? "",
             probationEnd: e.probationEnd ?? "",
             birthDate: e.birthDate ?? "",

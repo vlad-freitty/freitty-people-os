@@ -14,7 +14,8 @@
     "db:seed": "prisma db seed",
     "test": "vitest run",
     "test:watch": "vitest",
-    "worker": "tsx scripts/worker.ts"
+    "worker": "tsx scripts/worker.ts",
+    "db:upgrade": "tsx scripts/upgrade-reference-data.ts"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",

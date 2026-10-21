@@ -1,12 +1,13 @@
 import type { AbsencePolicy, Prisma } from "@prisma/client";
 import { addDays, addMonths, toIsoDate } from "@/lib/dates";
 import type { Tx } from "@/server/db";
-import { ValidationError } from "@/server/errors";
 
 /**
  * Absence balance (PRD 5). The balance is never stored as a number: it is the sum of ledger entries
  * (accrual, usage, expiry, carryover, manual_adjustment) grouped by accrual period (AbsenceBalance).
  * syncBalance() books everything due up to a date and is idempotent — every automatic entry has a unique key.
+ * Phase 6: one balance per absence type — every type has its own policy (person → department → company → default).
+ * Contractors have no PTO (policy): no policy, no balance; their absences are only recorded.
  */
 
 type Policy = Pick<
@@ -29,6 +30,16 @@ const utcToday = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now.getU
 export function periodsUntil(policy: Pick<Policy, "periodStart">, hireDate: Date, until: Date): Period[] {
   const periods: Period[] = [];
   if (hireDate > until) return periods;
+  if (policy.periodStart === "month") {
+    // calendar months: the rest of the hire month, then every month (Remote Days "within the calendar month")
+    let start = hireDate;
+    while (start <= until) {
+      const next = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1));
+      periods.push({ start, end: addDays(next, -1) });
+      start = next;
+    }
+    return periods;
+  }
   if (policy.periodStart === "hire_date") {
     for (let k = 0; ; k++) {
       const start = addMonths(hireDate, 12 * k);
@@ -51,7 +62,7 @@ export function periodsUntil(policy: Pick<Policy, "periodStart">, hireDate: Date
 /** Accrual entries of one period: [date, amount]. */
 export function accrualsFor(policy: Pick<Policy, "accrual" | "periodStart" | "daysPerPeriod">, period: Period, until: Date): [Date, number][] {
   const total = n(policy.daysPerPeriod);
-  if (policy.accrual === "upfront") {
+  if (policy.accrual === "upfront" || policy.periodStart === "month") {
     if (period.start > until) return [];
     let amount = total;
     if (policy.periodStart === "jan_1") {
@@ -83,26 +94,30 @@ export function expiryDate(policy: Pick<Policy, "expiry" | "expiryMonths">, peri
   return addMonths(dayAfter, policy.expiryMonths ?? 0);
 }
 
-/** Effective policy: person → department (up the tree) → company (decision 4). */
-export async function effectivePolicy(tx: Tx, employeeId: string): Promise<AbsencePolicy | null> {
-  const e = await tx.employee.findUniqueOrThrow({
-    where: { id: employeeId },
-    select: { absencePolicy: true, departmentId: true, company: { select: { absencePolicy: true } } },
-  });
-  if (e.absencePolicy && !e.absencePolicy.deletedAt) return e.absencePolicy;
+/** Effective policy of one type: person → department (up the tree) → company → the type's default (decision 4, phase 6). */
+export async function effectivePolicy(tx: Tx, employeeId: string, absenceTypeId: string): Promise<AbsencePolicy | null> {
+  const e = await tx.employee.findUniqueOrThrow({ where: { id: employeeId }, select: { departmentId: true, companyId: true, employmentType: true } });
+  if (e.employmentType === "contractor") return null;
+  const live = { absenceTypeId, policy: { deletedAt: null } };
+  const own = await tx.absencePolicyAssignment.findFirst({ where: { ...live, employeeId }, include: { policy: true } });
+  if (own) return own.policy;
   let current: string | null = e.departmentId;
   const seen = new Set<string>();
   while (current && !seen.has(current)) {
     seen.add(current);
-    const d: { parentId: string | null; absencePolicy: AbsencePolicy | null } | null = await tx.department.findUnique({
-      where: { id: current },
-      select: { parentId: true, absencePolicy: true },
-    });
-    if (d?.absencePolicy && !d.absencePolicy.deletedAt) return d.absencePolicy;
+    const a = await tx.absencePolicyAssignment.findFirst({ where: { ...live, departmentId: current }, include: { policy: true } });
+    if (a) return a.policy;
+    const d: { parentId: string | null } | null = await tx.department.findUnique({ where: { id: current }, select: { parentId: true } });
     current = d?.parentId ?? null;
   }
-  const c = e.company.absencePolicy;
-  return c && !c.deletedAt ? c : null;
+  const c = await tx.absencePolicyAssignment.findFirst({ where: { ...live, companyId: e.companyId }, include: { policy: true } });
+  if (c) return c.policy;
+  return tx.absencePolicy.findFirst({ where: { absenceTypeId, isDefault: true, deletedAt: null }, orderBy: { createdAt: "asc" } });
+}
+
+/** Types that keep a balance (deductsBalance), in display order. */
+export function balanceTypes(tx: Tx) {
+  return tx.absenceType.findMany({ where: { deletedAt: null, deductsBalance: true }, orderBy: [{ countsAsWorking: "asc" }, { createdAt: "asc" }] });
 }
 
 async function entry(tx: Tx, data: Prisma.AbsenceLedgerEntryUncheckedCreateInput) {
@@ -116,28 +131,40 @@ async function sumOf(tx: Tx, balanceId: string) {
   return round1(n(r._sum.amount ?? 0));
 }
 
-/** Books accruals, carryovers and expiries due up to `now`. Safe to run any number of times. */
+/** Books accruals, carryovers and expiries of every balance type due up to `now`. Safe to run any number of times. */
 export async function syncBalance(tx: Tx, employeeId: string, now = new Date()) {
+  let booked = 0;
+  for (const type of await balanceTypes(tx)) booked += (await syncTypeBalance(tx, employeeId, type.id, now)).booked;
+  return { booked };
+}
+
+/** The same for one absence type. */
+export async function syncTypeBalance(tx: Tx, employeeId: string, absenceTypeId: string, now = new Date()) {
   const today = utcToday(now);
-  const policy = await effectivePolicy(tx, employeeId);
+  const policy = await effectivePolicy(tx, employeeId, absenceTypeId);
   const e = await tx.employee.findUniqueOrThrow({ where: { id: employeeId }, select: { hireDate: true, status: true } });
   if (!policy || !e.hireDate || e.status === "candidate") return { policy, booked: 0 };
   let booked = 0;
 
-  const periods = periodsUntil(policy, e.hireDate, today);
-  const balances = [];
+  // monthly periods that already expired without carryover add nothing — they are not created (years of Remote Days)
+  const skipExpired = policy.periodStart === "month" && policy.expiry !== "never" && n(policy.carryoverMax) === 0;
+  const periods = periodsUntil(policy, e.hireDate, today).filter((p) => {
+    const exp = expiryDate(policy, p);
+    return !skipExpired || !exp || exp > today;
+  });
   for (const p of periods) {
     const b = await tx.absenceBalance.upsert({
       where: { employeeId_policyId_periodStart: { employeeId, policyId: policy.id, periodStart: p.start } },
       update: {},
-      create: { employeeId, policyId: policy.id, periodStart: p.start, periodEnd: p.end },
+      create: { employeeId, policyId: policy.id, absenceTypeId, periodStart: p.start, periodEnd: p.end },
     });
-    balances.push(b);
     for (const [date, amount] of accrualsFor(policy, p, today)) {
       if (amount === 0) continue;
       if (await entry(tx, { balanceId: b.id, type: "accrual", amount, date, idempotencyKey: `accrual:${b.id}:${iso(date)}` })) booked++;
     }
   }
+  // every period of this policy, including skipped old ones created while they were current
+  const balances = await tx.absenceBalance.findMany({ where: { employeeId, policyId: policy.id, periodStart: { lte: today } }, orderBy: { periodStart: "asc" } });
 
   for (const [i, b] of balances.entries()) {
     const period = { start: b.periodStart, end: b.periodEnd };
@@ -162,21 +189,21 @@ export async function syncBalance(tx: Tx, employeeId: string, now = new Date()) 
   return { policy, booked };
 }
 
-/** Current balance: sum of every entry of the person (expired periods already sum to zero). */
-export async function currentBalance(tx: Tx, employeeId: string) {
-  const r = await tx.absenceLedgerEntry.aggregate({ where: { balance: { employeeId } }, _sum: { amount: true } });
+/** Current balance of one type: the person's entries of that type (expired periods already sum to zero). */
+export async function currentBalance(tx: Tx, employeeId: string, absenceTypeId: string) {
+  const r = await tx.absenceLedgerEntry.aggregate({ where: { balance: { employeeId, absenceTypeId } }, _sum: { amount: true } });
   return round1(n(r._sum.amount ?? 0));
 }
 
 /**
  * Books the usage of an approved absence. Days are taken FIFO: the oldest period that has not expired first,
- * the rest from the current period (where it may go below zero only if the policy allows it).
+ * the rest from the current period — it may go below zero: policy rules never block (Vlad, phase 6), approvers saw
+ * the warning. No policy (contractor, type without a policy) → nothing is booked.
  */
-export async function bookUsage(tx: Tx, employeeId: string, days: number, absenceId: string, now = new Date()) {
-  const { policy } = await syncBalance(tx, employeeId, now);
-  if (!policy) throw new ValidationError({ absence_type: "no_absence_policy" });
-  const available = await currentBalance(tx, employeeId);
-  if (!policy.allowNegative && available < days) throw new ValidationError({ dates: `not_enough_balance: ${available}` });
+export async function bookUsage(tx: Tx, employeeId: string, absenceTypeId: string, days: number, absenceId: string, now = new Date()) {
+  const { policy } = await syncTypeBalance(tx, employeeId, absenceTypeId, now);
+  if (!policy) return null;
+  const available = await currentBalance(tx, employeeId, absenceTypeId);
 
   const today = utcToday(now);
   const balances = await tx.absenceBalance.findMany({ where: { employeeId, policyId: policy.id }, orderBy: { periodStart: "asc" } });

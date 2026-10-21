@@ -18,6 +18,7 @@ export type EmployeeFormValues = {
   position: string;
   managerId: string;
   employmentType: "employee" | "contractor";
+  grade: "" | "senior_management" | "middle_management" | "first_line_management" | "individual_contributor";
   hireDate: string;
   probationEnd: string;
   birthDate: string;
@@ -37,6 +38,7 @@ export const emptyEmployee: EmployeeFormValues = {
   position: "",
   managerId: "",
   employmentType: "employee",
+  grade: "",
   hireDate: "",
   probationEnd: "",
   birthDate: "",
@@ -82,6 +84,7 @@ export function EmployeeForm({
       photo: nullable(v.photo),
       locationId: nullable(v.locationId),
       managerId: nullable(v.managerId),
+      grade: nullable(v.grade),
       hireDate: nullable(v.hireDate),
       probationEnd: nullable(v.probationEnd),
       birthDate: nullable(v.birthDate),
@@ -156,6 +159,16 @@ export function EmployeeForm({
             {(["employee", "contractor"] as const).map((x) => (
               <option key={x} value={x}>
                 {t(`employmentType.${x}`)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("employee.grade")}>
+          <select {...bind("grade")}>
+            <option value="">{t("common.none")}</option>
+            {(["senior_management", "middle_management", "first_line_management", "individual_contributor"] as const).map((x) => (
+              <option key={x} value={x}>
+                {t(`grade.${x}`)}
               </option>
             ))}
           </select>

@@ -199,8 +199,10 @@ DEFS.push({
       { key: "document", labelUk: "Документ (лікарняний тощо)", labelEn: "Document (sick note etc.)", type: "file", required: false },
       { key: "comment", labelUk: "Коментар", labelEn: "Comment", type: "textarea", required: false },
     ],
+    // PTO policy (phase 6): approved only when both the direct manager and Head of People confirm — two different people
     steps: [
-      { orderGroup: 1, nameUk: "Погодження керівником відділу", nameEn: "Department head approval", stepType: "approve", assigneeRule: "subject_dept_head", slaDays: 2, onReject: close },
+      { orderGroup: 1, nameUk: "Погодження прямим керівником", nameEn: "Direct manager approval", stepType: "approve", assigneeRule: "subject_manager", slaDays: 2, onReject: close },
+      { orderGroup: 1, nameUk: "Погодження Head of People", nameEn: "Head of People approval", stepType: "approve", assigneeRule: "role_first_free", assigneeValue: "head_of_people", slaDays: 2, onReject: close },
     ],
   }),
 });
@@ -260,4 +262,26 @@ export async function seedStarterTemplates(prisma: PrismaClient) {
     ids[def.code] = type.id;
   }
   return ids;
+}
+
+/**
+ * Phase 6: the absence template of phase 2 (one step "department head") gets a new published version with the two
+ * approvals. A template already edited in the constructor is left alone.
+ */
+export async function upgradeStarterTemplates(prisma: PrismaClient) {
+  const def = DEFS.find((d) => d.code === "absence")!;
+  const type = await prisma.requestType.findUnique({ where: { code: "absence" }, include: { currentVersion: { include: { steps: true } } } });
+  const steps = type?.currentVersion?.steps ?? [];
+  if (!type?.currentVersion || steps.length !== 1 || steps[0].assigneeRule !== "subject_dept_head") return false;
+  const content: DraftContent = normalizeGroups(draftContent.parse(def.content({})));
+  const errors = await validateTemplate(prisma, def.kind, content);
+  if (errors.length) throw new Error(`absence template upgrade is invalid: ${errors.join("; ")}`);
+  const last = await prisma.requestTypeVersion.findFirst({ where: { requestTypeId: type.id }, orderBy: { version: "desc" } });
+  const version = await prisma.requestTypeVersion.create({
+    data: { requestTypeId: type.id, version: (last?.version ?? 1) + 1, status: "published", publishedAt: new Date() },
+  });
+  await writeContent(prisma, version.id, content);
+  await prisma.requestTypeVersion.update({ where: { id: type.currentVersion.id }, data: { status: "archived" } });
+  await prisma.requestType.update({ where: { id: type.id }, data: { currentVersionId: version.id } });
+  return true;
 }

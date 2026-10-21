@@ -82,6 +82,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Partial<Record<Permission,
   },
   user: USER_PERMISSIONS,
   hr: USER_PERMISSIONS,
+  // approves time off together with the direct manager (phase 6, PTO policy)
+  head_of_people: USER_PERMISSIONS,
   legal: USER_PERMISSIONS,
   // finance calculates and pays (phase 3 plan): sees every profile and its money
   finance: { ...USER_PERMISSIONS, "employees.view": "all", "employees.view_sensitive": "all", "payments.manage": "all" },
@@ -94,6 +96,7 @@ export const SYSTEM_ROLES = [
   { code: "dept_head", nameUk: "Керівник відділу", nameEn: "Department head" },
   { code: "user", nameUk: "Користувач", nameEn: "User" },
   { code: "hr", nameUk: "HR", nameEn: "HR" },
+  { code: "head_of_people", nameUk: "Head of People", nameEn: "Head of People" },
   { code: "legal", nameUk: "Legal", nameEn: "Legal" },
   { code: "finance", nameUk: "Фінанси", nameEn: "Finance" },
   { code: "office_admin", nameUk: "Адміністратор офісу", nameEn: "Office admin" },

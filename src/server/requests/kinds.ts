@@ -169,7 +169,7 @@ async function completeAbsence(tx: Tx, actor: Actor | null, r: RequestCtx) {
       createdById: actor?.userId,
     },
   });
-  const usage = type.deductsBalance ? await bookUsage(tx, employeeId, days, absence.id) : null;
+  const usage = type.deductsBalance ? await bookUsage(tx, employeeId, type.id, days, absence.id) : null;
   await audit(tx, actor, {
     action: "request.absence.complete",
     entity: "Absence",

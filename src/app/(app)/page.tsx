@@ -1,13 +1,14 @@
 import { Alert02Icon, Calendar03Icon, FileEditIcon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
+import { BalanceList } from "@/components/balance-list";
 import { LocalTime } from "@/components/local-time";
 import { Badge, Card, Kpi, LinkButton, PageTitle } from "@/components/ui";
 import { formatDate, formatMoney, localized } from "@/lib/format";
 import { getActor } from "@/server/auth/session";
 import { scopeOf } from "@/server/authz/policy";
 import { isoWeekday, nextIso } from "@/server/calendar/core";
-import { getBalance } from "@/server/services/absences";
+import { getBalances } from "@/server/services/absences";
 import { licenseCosts } from "@/server/services/assets";
 import { calendarView, canSeeTeamAbsences, visibleAbsences } from "@/server/services/calendar";
 import { expiringDocuments, getDashboard, headcountByDepartment, paymentsByStatus, probationMilestones, requestsByStatus } from "@/server/services/dashboard";
@@ -53,7 +54,7 @@ export default async function DashboardPage() {
     getDashboard(actor),
     listMyTasks(actor),
     hasProfile ? listRequests(actor, { mine: "initiated", status: "in_progress" }) : Promise.resolve([]),
-    hasProfile ? getBalance(actor, me.employee!.id) : Promise.resolve(null),
+    hasProfile ? getBalances(actor, me.employee!.id) : Promise.resolve(null),
     hasProfile ? calendarView(actor, { from: today, to: nextIso(today, 14) }) : Promise.resolve(null),
     hasProfile ? listShifts(actor, { from: today, to: nextIso(weekEnd, 7), employeeId: me.employee!.id }) : Promise.resolve([]),
     hasProfile ? listPayments(actor, { employeeId: me.employee!.id }) : Promise.resolve([]),
@@ -72,7 +73,10 @@ export default async function DashboardPage() {
   const locale = await getLocale();
   const nothing = <p className="text-sm text-ink-mute">{t("dashboard2.nothing")}</p>;
   const isoOf = (d: Date) => d.toISOString().slice(0, 10);
-  const absentToday = absentWeek.filter((a) => isoOf(a.startDate) <= today && isoOf(a.endDate) >= today);
+  const vacation = balance?.balances.find((b) => b.type.code === "vacation") ?? balance?.balances[0] ?? null;
+  // Remote Days are working days — not "who is absent" (phase 6)
+  const awayWeek = absentWeek.filter((a) => !a.type.countsAsWorking);
+  const absentToday = awayWeek.filter((a) => isoOf(a.startDate) <= today && isoOf(a.endDate) >= today);
   const upcomingItems = (upcoming?.items ?? []).filter((i) => i.kind !== "absence").slice(0, 8);
   const showTeam = canSeeTeamAbsences(actor) || teamRequests || overdue.length > 0 || probation.length > 0 || expiring || byDepartment;
   const showCompany = allScope("employees.view") || paymentStatus || bonuses || costs || scopeOf(actor, "steps.reassign") === "all";
@@ -89,7 +93,7 @@ export default async function DashboardPage() {
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi label={t("dashboard2.myTasks")} value={tasks.length} icon={TaskDone01Icon} tone="ok" href="/tasks" />
         {hasProfile && <Kpi label={t("dashboard4.myRequests")} value={myRequests.length} icon={FileEditIcon} tone="blue" href="/requests?mine=initiated" />}
-        {balance && <Kpi label={t("dashboard3.balance")} value={balance.balance} hint={balance.policy?.name} icon={Calendar03Icon} tone="warn" />}
+        {vacation && <Kpi label={localized(locale, vacation.type.nameUk, vacation.type.nameEn)} value={vacation.balance} hint={t("dashboard3.balance")} icon={Calendar03Icon} tone="warn" />}
         {showTeam && <Kpi label={t("dashboard2.overdue")} value={overdue.length} icon={Alert02Icon} tone="red" />}
       </div>
 
@@ -119,8 +123,7 @@ export default async function DashboardPage() {
 
         {balance && (
           <Card title={t("dashboard3.balance")} actions={<Link className="text-sm font-medium text-red hover:text-red-strong" href="/requests/new">{t("balance.request")}</Link>}>
-            <p className="text-[28px] leading-tight font-bold text-ink-2">{t("balance.days", { n: balance.balance })}</p>
-            <p className="text-xs text-ink-mute">{balance.policy?.name ?? t("balance.noPolicy")}</p>
+            <BalanceList eligible={balance.eligible} balances={balance.balances} locale={locale} />
           </Card>
         )}
 
@@ -206,11 +209,11 @@ export default async function DashboardPage() {
                   ))}
                 </ul>
               )}
-              {absentWeek.length > absentToday.length && (
+              {awayWeek.length > absentToday.length && (
                 <>
                   <p className="label mt-3">{t("dashboard3.absentWeek")}</p>
                   <ul className="space-y-1 text-sm">
-                    {absentWeek
+                    {awayWeek
                       .filter((a) => !absentToday.includes(a))
                       .map((a) => (
                         <li key={a.id}>

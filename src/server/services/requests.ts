@@ -4,6 +4,7 @@ import type { Actor } from "@/server/authz/actor";
 import { scopeOf } from "@/server/authz/policy";
 import { prisma } from "@/server/db";
 import { NotFoundError } from "@/server/errors";
+import { absenceInsight } from "@/server/absences/insight";
 import { addComment, canInitiate, canReassign } from "@/server/requests/engine";
 import { checklistSchema, optionsSchema } from "@/server/requests/schema";
 import { signedFileUrl } from "@/server/storage";
@@ -313,4 +314,28 @@ export async function listInitiableTypes(actor: Actor) {
           })),
       };
     });
+}
+
+/**
+ * Absence request side panel (phase 6): days since the last absence of the same type, that type's balance and
+ * policy warnings — for everyone who sees the request. Null for other kinds.
+ */
+export async function requestAbsenceInsight(actor: Actor, id: string) {
+  if (!(await canViewRequest(actor, id))) throw new NotFoundError("request");
+  const r = await prisma.request.findUniqueOrThrow({
+    where: { id },
+    include: { version: { include: { requestType: true } }, values: true, absence: { select: { id: true } } },
+  });
+  if (r.version.requestType.kind !== "absence" || !r.subjectEmployeeId) return null;
+  const values = Object.fromEntries(r.values.map((v) => [v.fieldKey, v.value])) as Record<string, unknown>;
+  const employeeId = r.subjectEmployeeId;
+  return prisma.$transaction((tx) => absenceInsight(tx, employeeId, values, { requestId: r.id, ignoreAbsenceId: r.absence?.id }), { timeout: 30_000 });
+}
+
+/** The same preview for the form of a new absence request of the current user. */
+export async function previewMyAbsence(actor: Actor, raw: unknown) {
+  if (!actor.employeeId) throw new NotFoundError("employee");
+  const values = z.record(z.string(), z.unknown()).parse(raw);
+  const employeeId = actor.employeeId;
+  return prisma.$transaction((tx) => absenceInsight(tx, employeeId, values), { timeout: 30_000 });
 }

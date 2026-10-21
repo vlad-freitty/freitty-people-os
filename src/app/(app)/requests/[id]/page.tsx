@@ -8,7 +8,8 @@ import { Badge, Card, PageTitle } from "@/components/ui";
 import { formatDate, localized } from "@/lib/format";
 import { getActor } from "@/server/auth/session";
 import { NotFoundError } from "@/server/errors";
-import { getRequest } from "@/server/services/requests";
+import { getRequest, requestAbsenceInsight } from "@/server/services/requests";
+import { AbsenceInsightView, type AbsenceInsightDto } from "@/components/requests/absence-insight";
 import { requestLookups } from "../lookups";
 
 const STATUS_TONE = { draft: "neutral", in_progress: "warn", done: "ok", rejected: "red", cancelled: "neutral" } as const;
@@ -22,7 +23,7 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
     throw err;
   });
   const locale = await getLocale();
-  const [t, lookups] = await Promise.all([getTranslations(), requestLookups(actor, locale)]);
+  const [t, lookups, insight] = await Promise.all([getTranslations(), requestLookups(actor, locale), requestAbsenceInsight(actor, id)]);
   const groups = [...new Set(r.steps.map((s) => s.group))].sort((a, b) => a - b);
   const fieldDefs = r.fields as FieldDef[];
 
@@ -107,6 +108,11 @@ export default async function RequestPage({ params }: { params: Promise<{ id: st
         </Card>
 
         <div className="space-y-6">
+          {insight && (
+            <Card title={t("absenceInsight.title")}>
+              <AbsenceInsightView insight={insight as AbsenceInsightDto} showWarnings={r.status === "in_progress"} />
+            </Card>
+          )}
           <Card title={t("requests.fields")}>
             <dl className="space-y-3">
               {r.fields.map((f) => (

@@ -6,12 +6,13 @@ import { Badge, Card, DefinitionList, LinkButton, PageTitle, statusTone } from "
 import { formatDate, formatMoney, formatMonthDay, localized } from "@/lib/format";
 import { getActor } from "@/server/auth/session";
 import { can, scopeOf } from "@/server/authz/policy";
-import { getBalance } from "@/server/services/absences";
+import { getBalances } from "@/server/services/absences";
 import { listPayments } from "@/server/services/payments";
 import { getNotificationSettings } from "@/server/services/notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { PaymentsTable } from "@/components/money/payments-board";
 import { BalanceAdjustForm, CancelAbsenceButton } from "@/components/balance-actions";
+import { BalanceList } from "@/components/balance-list";
 import { NotFoundError } from "@/server/errors";
 import { getEmployee, listRates } from "@/server/services/employees";
 import { listEmployeeAssets } from "@/server/services/assets";
@@ -38,7 +39,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
     e.access === "basic"
       ? [[], [], []]
       : await Promise.all([listGrants(actor, e.id), listEmployeeAssets(actor, e.id), e.access === "sensitive" ? listDocuments(actor, e.id) : []]);
-  const balance = e.access === "basic" ? null : await getBalance(actor, e.id);
+  const balance = e.access === "basic" ? null : await getBalances(actor, e.id);
   const payments = e.access === "sensitive" ? await listPayments(actor, { employeeId: e.id }) : [];
   // channels and the Telegram link are personal: shown on one's own profile only
   const notificationSettings = e.id === actor.employeeId ? await getNotificationSettings(actor) : null;
@@ -99,6 +100,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
                 { label: t("employee.location"), value: e.location ? `${e.location.name} · ${e.location.timezone}` : none },
                 { label: t("employee.manager"), value: e.manager?.name ?? none },
                 { label: t("employee.employmentType"), value: t(`employmentType.${e.employmentType}`) },
+                { label: t("employee.grade"), value: e.grade ? t(`grade.${e.grade}`) : none },
                 { label: t("employee.hireDate"), value: formatDate(e.hireDate, locale) ?? none },
                 { label: t("employee.probationEnd"), value: formatDate(e.probationEnd, locale) ?? none },
                 { label: t("employee.birthDate"), value: formatDate(e.birthDate, locale) ?? none },
@@ -162,10 +164,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
           <div className="grid gap-6 lg:grid-cols-[1fr_2fr_2fr]">
             <div>
               <p className="label">{t("balance.balance")}</p>
-              <p className="text-[28px] leading-tight font-bold text-ink-2">{t("balance.days", { n: balance.balance })}</p>
-              <p className="mt-1 text-xs text-ink-mute">
-                {balance.policy ? `${t("balance.policy")}: ${balance.policy.name}` : t("balance.noPolicy")}
-              </p>
+              <BalanceList eligible={balance.eligible} balances={balance.balances} locale={locale} />
             </div>
             <div>
               <p className="label">{t("balance.absences")}</p>
@@ -192,7 +191,8 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
                 {balance.entries.map((x) => (
                   <li key={x.id} className="flex justify-between gap-2 border-b border-line/50 pb-1">
                     <span>
-                      {formatDate(x.date, locale)} · {t(`balance.types.${x.type}`)}
+                      <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: x.absenceType.color }} />
+                      {formatDate(x.date, locale)} · {localized(locale, x.absenceType.nameUk, x.absenceType.nameEn)} · {t(`balance.types.${x.type}`)}
                       {x.comment && x.type === "manual_adjustment" && <span className="text-ink-mute"> · {x.comment}</span>}
                     </span>
                     <span className={`font-mono ${x.amount < 0 ? "text-red-strong" : "text-ok"}`}>
@@ -202,7 +202,9 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
                   </li>
                 ))}
               </ul>
-              {canAdjust && <BalanceAdjustForm employeeId={e.id} />}
+              {canAdjust && balance.balances.length > 0 && (
+                <BalanceAdjustForm employeeId={e.id} types={balance.balances.map((b) => ({ id: b.type.id, name: localized(locale, b.type.nameUk, b.type.nameEn) }))} />
+              )}
             </div>
           </div>
         </Card>

@@ -40,7 +40,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const label = (i: CalendarItem) => {
     if (i.kind === "birthday") return `🎂 ${i.title}`;
     if (i.kind === "anniversary") return `🎉 ${i.title} · ${t("anniversary", { years: i.years ?? 0 })}`;
-    if (i.kind === "absence") return `${i.title} · ${i.titleEn ?? ""}`;
+    if (i.kind === "absence") return `${i.remote ? "🏠 " : ""}${i.title} · ${localized(locale, i.typeUk ?? i.titleEn ?? "", i.titleEn)}`;
     return localized(locale, i.title, i.titleEn);
   };
 

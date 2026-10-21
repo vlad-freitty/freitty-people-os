@@ -45,47 +45,45 @@ enum PermissionScope {
 // ───────────── Org structure ─────────────
 
 model Company {
-  id                         String          @id @default(uuid()) @db.Uuid
-  name                       String          @unique
+  id                         String                    @id @default(uuid()) @db.Uuid
+  name                       String                    @unique
   country                    String
   departments                Department[]
   employees                  Employee[]
-  /// default absence policy for the company (phase 2; the most specific assignment wins)
-  absencePolicyId            String?         @db.Uuid
-  absencePolicy              AbsencePolicy?  @relation(fields: [absencePolicyId], references: [id])
+  /// absence policies per type for the company (phase 6; the most specific assignment wins)
+  policyAssignments          AbsencePolicyAssignment[]
   workWeeks                  WorkWeek[]
   /// multiplier for shifts on non-working days (PRD 6, default 1.0)
-  nonWorkingShiftCoefficient Decimal         @default(1.0) @db.Decimal(4, 2)
+  nonWorkingShiftCoefficient Decimal                   @default(1.0) @db.Decimal(4, 2)
   shifts                     Shift[]
   paymentPeriods             PaymentPeriod[]
-  createdAt                  DateTime        @default(now())
-  updatedAt                  DateTime        @updatedAt
-  createdById                String?         @db.Uuid
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+  createdById                String?                   @db.Uuid
   deletedAt                  DateTime?
 
   @@map("company")
 }
 
 model Department {
-  id              String           @id @default(uuid()) @db.Uuid
-  companyId       String           @db.Uuid
-  company         Company          @relation(fields: [companyId], references: [id])
-  name            String
-  parentId        String?          @db.Uuid
-  parent          Department?      @relation("DepartmentTree", fields: [parentId], references: [id])
-  children        Department[]     @relation("DepartmentTree")
-  heads           DepartmentHead[]
-  employees       Employee[]
-  requestTypes    RequestType[]
-  requests        Request[]
-  shifts          Shift[]
-  /// absence policy for the department (phase 2); applies to sub-departments unless they set their own
-  absencePolicyId String?          @db.Uuid
-  absencePolicy   AbsencePolicy?   @relation(fields: [absencePolicyId], references: [id])
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  createdById     String?          @db.Uuid
-  deletedAt       DateTime?
+  id                String                    @id @default(uuid()) @db.Uuid
+  companyId         String                    @db.Uuid
+  company           Company                   @relation(fields: [companyId], references: [id])
+  name              String
+  parentId          String?                   @db.Uuid
+  parent            Department?               @relation("DepartmentTree", fields: [parentId], references: [id])
+  children          Department[]              @relation("DepartmentTree")
+  heads             DepartmentHead[]
+  employees         Employee[]
+  requestTypes      RequestType[]
+  requests          Request[]
+  shifts            Shift[]
+  /// absence policies per type for the department (phase 6); apply to sub-departments unless they set their own
+  policyAssignments AbsencePolicyAssignment[]
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  createdById       String?                   @db.Uuid
+  deletedAt         DateTime?
 
   @@unique([companyId, name])
   @@map("department")
@@ -123,53 +121,54 @@ model DepartmentHead {
 // ───────────── People ─────────────
 
 model Employee {
-  id              String           @id @default(uuid()) @db.Uuid
-  userId          String?          @unique @db.Uuid
-  user            User?            @relation(fields: [userId], references: [id])
-  firstName       String
-  lastName        String
-  workEmail       String           @unique
-  phone           String?
-  photo           String?
-  companyId       String           @db.Uuid
-  company         Company          @relation(fields: [companyId], references: [id])
-  departmentId    String           @db.Uuid
-  department      Department       @relation(fields: [departmentId], references: [id])
-  locationId      String?          @db.Uuid
-  location        Location?        @relation(fields: [locationId], references: [id])
-  position        String
-  managerId       String?          @db.Uuid
-  manager         Employee?        @relation("EmployeeManager", fields: [managerId], references: [id])
-  reports         Employee[]       @relation("EmployeeManager")
-  employmentType  EmploymentType
-  hireDate        DateTime?        @db.Date
-  probationEnd    DateTime?        @db.Date
-  birthDate       DateTime?        @db.Date
-  showBirthday    Boolean          @default(true)
-  status          EmployeeStatus   @default(active)
-  /// personal absence policy; overrides department and company (phase 2)
-  absencePolicyId String?          @db.Uuid
-  absencePolicy   AbsencePolicy?   @relation(fields: [absencePolicyId], references: [id])
-  balances        AbsenceBalance[]
-  absences        Absence[]
-  shifts          Shift[]
-  payments        Payment[]
-  bonuses         Bonus[]
-  locale          Locale           @default(uk)
-  rates           RateHistory[]
-  headOf          DepartmentHead[]
-  accessGrants    AccessGrant[]
-  assets          Asset[]
-  documents       Document[]
-  ownedSystems    System[]
-  initiated       Request[]        @relation("RequestInitiator")
-  subjectOf       Request[]        @relation("RequestSubject")
-  assignedSteps   StepInstance[]   @relation("StepAssignee")
-  comments        Comment[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  createdById     String?          @db.Uuid
-  deletedAt       DateTime?
+  id                String                    @id @default(uuid()) @db.Uuid
+  userId            String?                   @unique @db.Uuid
+  user              User?                     @relation(fields: [userId], references: [id])
+  firstName         String
+  lastName          String
+  workEmail         String                    @unique
+  phone             String?
+  photo             String?
+  companyId         String                    @db.Uuid
+  company           Company                   @relation(fields: [companyId], references: [id])
+  departmentId      String                    @db.Uuid
+  department        Department                @relation(fields: [departmentId], references: [id])
+  locationId        String?                   @db.Uuid
+  location          Location?                 @relation(fields: [locationId], references: [id])
+  position          String
+  managerId         String?                   @db.Uuid
+  manager           Employee?                 @relation("EmployeeManager", fields: [managerId], references: [id])
+  reports           Employee[]                @relation("EmployeeManager")
+  employmentType    EmploymentType
+  hireDate          DateTime?                 @db.Date
+  probationEnd      DateTime?                 @db.Date
+  birthDate         DateTime?                 @db.Date
+  showBirthday      Boolean                   @default(true)
+  status            EmployeeStatus            @default(active)
+  /// level from the PTO & Benefits Guide (phase 6); visible with the full profile only
+  grade             EmployeeGrade?
+  /// personal absence policies per type; override department and company (phase 6)
+  policyAssignments AbsencePolicyAssignment[]
+  balances          AbsenceBalance[]
+  absences          Absence[]
+  shifts            Shift[]
+  payments          Payment[]
+  bonuses           Bonus[]
+  locale            Locale                    @default(uk)
+  rates             RateHistory[]
+  headOf            DepartmentHead[]
+  accessGrants      AccessGrant[]
+  assets            Asset[]
+  documents         Document[]
+  ownedSystems      System[]
+  initiated         Request[]                 @relation("RequestInitiator")
+  subjectOf         Request[]                 @relation("RequestSubject")
+  assignedSteps     StepInstance[]            @relation("StepAssignee")
+  comments          Comment[]
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  createdById       String?                   @db.Uuid
+  deletedAt         DateTime?
 
   @@index([departmentId])
   @@index([companyId])
@@ -452,6 +451,8 @@ enum AssigneeRule {
   initiator
   initiator_dept_head
   subject_dept_head
+  /// the subject's direct manager (Employee.managerId), else the department head (phase 6)
+  subject_manager
   system_owner
   role_first_free
 }
@@ -768,6 +769,15 @@ enum AccrualMode {
 enum PeriodStart {
   hire_date
   jan_1
+  /// calendar months from the hire date (phase 6: Remote Days "per 30 days")
+  month
+}
+
+enum EmployeeGrade {
+  senior_management
+  middle_management
+  first_line_management
+  individual_contributor
 }
 
 enum ExpiryMode {
@@ -796,64 +806,96 @@ enum AbsenceStatus {
 }
 
 model AbsenceType {
-  id               String    @id @default(uuid()) @db.Uuid
-  code             String    @unique
+  id               String           @id @default(uuid()) @db.Uuid
+  code             String           @unique
   nameUk           String
   nameEn           String?
-  color            String    @default("#1f7a4d")
-  paid             Boolean   @default(true)
-  deductsBalance   Boolean   @default(false)
-  requiresDocument Boolean   @default(false)
-  requiresApproval Boolean   @default(true)
-  minDays          Decimal?  @db.Decimal(5, 1)
-  maxDays          Decimal?  @db.Decimal(5, 1)
-  allowHalfDay     Boolean   @default(false)
+  color            String           @default("#1f7a4d")
+  paid             Boolean          @default(true)
+  deductsBalance   Boolean          @default(false)
+  requiresDocument Boolean          @default(false)
+  requiresApproval Boolean          @default(true)
+  minDays          Decimal?         @db.Decimal(5, 1)
+  maxDays          Decimal?         @db.Decimal(5, 1)
+  allowHalfDay     Boolean          @default(false)
+  /// a working day, not time off (Remote Day): shown as "remote", never in "who is absent" (phase 6)
+  countsAsWorking  Boolean          @default(false)
   absences         Absence[]
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  createdById      String?   @db.Uuid
+  policies         AbsencePolicy[]
+  balances         AbsenceBalance[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  createdById      String?          @db.Uuid
   deletedAt        DateTime?
 
   @@map("absence_type")
 }
 
 model AbsencePolicy {
-  id                 String           @id @default(uuid()) @db.Uuid
-  name               String           @unique
-  daysPerPeriod      Decimal          @db.Decimal(5, 1)
+  id                 String                    @id @default(uuid()) @db.Uuid
+  name               String                    @unique
+  /// the absence type this policy counts (phase 6: one balance per type)
+  absenceTypeId      String                    @db.Uuid
+  absenceType        AbsenceType               @relation(fields: [absenceTypeId], references: [id])
+  /// applies to every eligible employee unless an assignment says otherwise (one default per type)
+  isDefault          Boolean                   @default(false)
+  daysPerPeriod      Decimal                   @db.Decimal(5, 1)
   accrual            AccrualMode
   periodStart        PeriodStart
   expiry             ExpiryMode
   expiryMonths       Int?
-  carryoverMax       Decimal          @default(0) @db.Decimal(5, 1)
-  availableAfterDays Int              @default(0)
-  allowNegative      Boolean          @default(false)
-  countDays          DayCount         @default(working)
-  employees          Employee[]
-  departments        Department[]
-  companies          Company[]
+  carryoverMax       Decimal                   @default(0) @db.Decimal(5, 1)
+  availableAfterDays Int                       @default(0)
+  allowNegative      Boolean                   @default(false)
+  countDays          DayCount                  @default(working)
+  assignments        AbsencePolicyAssignment[]
   balances           AbsenceBalance[]
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-  createdById        String?          @db.Uuid
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  createdById        String?                   @db.Uuid
   deletedAt          DateTime?
 
   @@map("absence_policy")
 }
 
+/// Policy of one absence type for a company, a department (and its sub-departments) or one employee (phase 6).
+model AbsencePolicyAssignment {
+  id            String        @id @default(uuid()) @db.Uuid
+  policyId      String        @db.Uuid
+  policy        AbsencePolicy @relation(fields: [policyId], references: [id])
+  /// technical: copy of policy.absenceTypeId so one target has at most one policy per type
+  absenceTypeId String        @db.Uuid
+  companyId     String?       @db.Uuid
+  company       Company?      @relation(fields: [companyId], references: [id])
+  departmentId  String?       @db.Uuid
+  department    Department?   @relation(fields: [departmentId], references: [id])
+  employeeId    String?       @db.Uuid
+  employee      Employee?     @relation(fields: [employeeId], references: [id])
+  createdAt     DateTime      @default(now())
+  createdById   String?       @db.Uuid
+
+  @@unique([absenceTypeId, companyId])
+  @@unique([absenceTypeId, departmentId])
+  @@unique([absenceTypeId, employeeId])
+  @@map("absence_policy_assignment")
+}
+
 /// One accrual period of one employee under one policy; the balance itself is the sum of its ledger entries.
 model AbsenceBalance {
-  id          String               @id @default(uuid()) @db.Uuid
-  employeeId  String               @db.Uuid
-  employee    Employee             @relation(fields: [employeeId], references: [id])
-  policyId    String               @db.Uuid
-  policy      AbsencePolicy        @relation(fields: [policyId], references: [id])
-  periodStart DateTime             @db.Date
-  periodEnd   DateTime             @db.Date
+  id            String               @id @default(uuid()) @db.Uuid
+  employeeId    String               @db.Uuid
+  employee      Employee             @relation(fields: [employeeId], references: [id])
+  policyId      String               @db.Uuid
+  policy        AbsencePolicy        @relation(fields: [policyId], references: [id])
+  /// technical: copy of policy.absenceTypeId — the balance of a type is the sum over its periods (phase 6)
+  absenceTypeId String               @db.Uuid
+  absenceType   AbsenceType          @relation(fields: [absenceTypeId], references: [id])
+  periodStart   DateTime             @db.Date
+  periodEnd     DateTime             @db.Date
   /// set when the end-of-period carryover has been booked
-  closedAt    DateTime?
-  entries     AbsenceLedgerEntry[]
-  createdAt   DateTime             @default(now())
+  closedAt      DateTime?
+  entries       AbsenceLedgerEntry[]
+  createdAt     DateTime             @default(now())
 
   @@unique([employeeId, policyId, periodStart])
   @@map("absence_balance")

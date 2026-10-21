@@ -38,6 +38,7 @@ export type AbsenceTypeDto = {
   minDays: number | null;
   maxDays: number | null;
   allowHalfDay: boolean;
+  countsAsWorking: boolean;
 };
 
 const FLAGS = [
@@ -46,6 +47,7 @@ const FLAGS = [
   ["requiresDocument", "requiresDocument"],
   ["requiresApproval", "requiresApproval"],
   ["allowHalfDay", "halfDay"],
+  ["countsAsWorking", "countsAsWorking"],
 ] as const;
 
 export function AbsenceTypeForm({ type }: { type?: AbsenceTypeDto }) {
@@ -61,6 +63,7 @@ export function AbsenceTypeForm({ type }: { type?: AbsenceTypeDto }) {
     requiresDocument: type?.requiresDocument ?? false,
     requiresApproval: type?.requiresApproval ?? true,
     allowHalfDay: type?.allowHalfDay ?? false,
+    countsAsWorking: type?.countsAsWorking ?? false,
     minDays: type?.minDays?.toString() ?? "",
     maxDays: type?.maxDays?.toString() ?? "",
   });
@@ -100,9 +103,11 @@ export function AbsenceTypeForm({ type }: { type?: AbsenceTypeDto }) {
 export type PolicyDto = {
   id: string;
   name: string;
+  absenceTypeId: string;
+  isDefault: boolean;
   daysPerPeriod: number;
   accrual: "upfront" | "monthly";
-  periodStart: "hire_date" | "jan_1";
+  periodStart: "hire_date" | "jan_1" | "month";
   expiry: "end_of_period" | "months_after" | "never";
   expiryMonths: number | null;
   carryoverMax: number;
@@ -112,11 +117,13 @@ export type PolicyDto = {
   employeeCount: number;
 };
 
-export function PolicyForm({ policy }: { policy?: PolicyDto }) {
+export function PolicyForm({ policy, types }: { policy?: PolicyDto; types: { id: string; name: string }[] }) {
   const t = useTranslations("settings");
   const { error, pending, run } = useRun();
   const [v, setV] = useState({
     name: policy?.name ?? "",
+    absenceTypeId: policy?.absenceTypeId ?? types[0]?.id ?? "",
+    isDefault: policy?.isDefault ?? false,
     daysPerPeriod: String(policy?.daysPerPeriod ?? 10),
     accrual: policy?.accrual ?? "upfront",
     periodStart: policy?.periodStart ?? "hire_date",
@@ -156,11 +163,20 @@ export function PolicyForm({ policy }: { policy?: PolicyDto }) {
         <Field label={t("name")}>
           <input className="field" required value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
         </Field>
+        <Field label={t("policyType")}>
+          <select className="field" value={v.absenceTypeId} disabled={!!policy} onChange={(e) => setV({ ...v, absenceTypeId: e.target.value })}>
+            {types.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+        </Field>
         <Field label={t("daysPerPeriod")}>
           <input className="field" type="number" step="0.5" min="0" value={v.daysPerPeriod} onChange={(e) => setV({ ...v, daysPerPeriod: e.target.value })} />
         </Field>
         <Field label={t("accrual")}>{sel("accrual", ["upfront", "monthly"], "accruals")}</Field>
-        <Field label={t("periodStart")}>{sel("periodStart", ["hire_date", "jan_1"], "periodStarts")}</Field>
+        <Field label={t("periodStart")}>{sel("periodStart", ["hire_date", "jan_1", "month"], "periodStarts")}</Field>
         <Field label={t("expiry")}>{sel("expiry", ["end_of_period", "months_after", "never"], "expiries")}</Field>
         {v.expiry === "months_after" && (
           <Field label={t("expiryMonths")}>
@@ -175,10 +191,16 @@ export function PolicyForm({ policy }: { policy?: PolicyDto }) {
         </Field>
         <Field label={t("countDays")}>{sel("countDays", ["working", "calendar"], "countDayModes")}</Field>
       </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={v.allowNegative} onChange={(e) => setV({ ...v, allowNegative: e.target.checked })} />
-        {t("allowNegative")}
-      </label>
+      <div className="flex flex-wrap gap-4 text-sm">
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={v.isDefault} onChange={(e) => setV({ ...v, isDefault: e.target.checked })} />
+          {t("isDefault")}
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={v.allowNegative} onChange={(e) => setV({ ...v, allowNegative: e.target.checked })} />
+          {t("allowNegative")}
+        </label>
+      </div>
       <Button disabled={pending} variant={policy ? "secondary" : "primary"}>
         {policy ? t("commit") : t("newPolicy")}
       </Button>
@@ -186,16 +208,18 @@ export function PolicyForm({ policy }: { policy?: PolicyDto }) {
   );
 }
 
-/** One row: company / department / person → policy select. */
+/** One cell: company / department / person × absence type → policy select ("inherit" = the next level / default). */
 export function PolicyAssign({
   targetType,
   targetId,
+  absenceTypeId,
   label,
   current,
   policies,
 }: {
   targetType: "company" | "department" | "employee";
   targetId: string;
+  absenceTypeId: string;
   label: string;
   current: string | null;
   policies: { id: string; name: string }[];
@@ -203,16 +227,17 @@ export function PolicyAssign({
   const t = useTranslations("settings");
   const { error, pending, run } = useRun();
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-line/60 py-1.5 text-sm">
-      <span className="min-w-48 flex-1">{label}</span>
+    <div className="min-w-40">
       <select
-        className="field max-w-xs py-1"
+        className="field py-1"
         disabled={pending}
         value={current ?? ""}
         aria-label={label}
-        onChange={(e) => run(() => api("/settings/policy-assignment", { method: "PUT", body: { targetType, targetId, policyId: e.target.value || null } }))}
+        onChange={(e) =>
+          run(() => api("/settings/policy-assignment", { method: "PUT", body: { targetType, targetId, absenceTypeId, policyId: e.target.value || null } }))
+        }
       >
-        <option value="">{t("noPolicy")}</option>
+        <option value="">{t("inheritPolicy")}</option>
         {policies.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}

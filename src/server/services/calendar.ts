@@ -302,6 +302,9 @@ export type CalendarItem = {
   nonWorking: boolean;
   employeeId?: string;
   years?: number;
+  /** absence items: the type's name, and whether it is a working day elsewhere (Remote Day, phase 6) */
+  typeUk?: string;
+  remote?: boolean;
 };
 
 /** System layers (birthdays, anniversaries) are on when the layer exists and the viewer sees it. */
@@ -365,7 +368,17 @@ export async function calendarView(actor: Actor, raw: unknown) {
 
   for (const a of await visibleAbsences(actor, from, to)) {
     for (const date of occurrences({ date: a.startDate, endDate: a.endDate, recurrence: "none" }, from, to)) {
-      items.push({ date, kind: "absence", title: `${a.employee.firstName} ${a.employee.lastName}`, titleEn: a.type.nameEn ?? a.type.nameUk, color: a.type.color, nonWorking: false, employeeId: a.employeeId });
+      items.push({
+        date,
+        kind: "absence",
+        title: `${a.employee.firstName} ${a.employee.lastName}`,
+        titleEn: a.type.nameEn ?? a.type.nameUk,
+        typeUk: a.type.nameUk,
+        remote: a.type.countsAsWorking,
+        color: a.type.color,
+        nonWorking: false,
+        employeeId: a.employeeId,
+      });
     }
   }
 

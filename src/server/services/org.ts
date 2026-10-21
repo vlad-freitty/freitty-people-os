@@ -45,13 +45,12 @@ export async function getOrgStructure(_actor: Actor) {
     prisma.location.findMany({ where: { deletedAt: null }, orderBy: { name: "asc" } }),
   ]);
   return {
-    companies: companies.map((c) => ({ id: c.id, name: c.name, country: c.country, absencePolicyId: c.absencePolicyId })),
+    companies: companies.map((c) => ({ id: c.id, name: c.name, country: c.country })),
     departments: departments.map((d) => ({
       id: d.id,
       companyId: d.companyId,
       name: d.name,
       parentId: d.parentId,
-      absencePolicyId: d.absencePolicyId,
       employeeCount: d._count.employees,
       heads: d.heads
         .filter((h) => !h.employee.deletedAt)

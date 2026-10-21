@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import type { Actor } from "@/server/authz/actor";
 import { prisma } from "@/server/db";
 import { runImport } from "@/server/services/import";
+import { ensureAbsenceTypes } from "@/server/seed/calendar";
 import { actorFor, buildWorld } from "./helpers";
 
 const fixture = (name: string) => readFileSync(path.join(__dirname, "..", "prisma", "fixtures", name), "utf8");
@@ -113,10 +114,13 @@ describe("rates import", () => {
 
 describe("phase 2 import kinds: balances, accesses, assets", () => {
   it("each re-import changes nothing", async () => {
+    await ensureAbsenceTypes(prisma);
+    const vacation = await prisma.absenceType.findUniqueOrThrow({ where: { code: "vacation" } });
     const policy = await prisma.absencePolicy.create({
-      data: { name: "imp", daysPerPeriod: 10, accrual: "upfront", periodStart: "hire_date", expiry: "end_of_period" },
+      data: { name: "imp", absenceTypeId: vacation.id, daysPerPeriod: 10, accrual: "upfront", periodStart: "hire_date", expiry: "end_of_period" },
     });
-    const p1 = await prisma.employee.update({ where: { workEmail: "person01@example.test" }, data: { absencePolicyId: policy.id } });
+    const p1 = await prisma.employee.findUniqueOrThrow({ where: { workEmail: "person01@example.test" } });
+    await prisma.absencePolicyAssignment.create({ data: { policyId: policy.id, absenceTypeId: vacation.id, employeeId: p1.id } });
     await prisma.system.create({ data: { name: "HubSpot" } });
 
     const balances = "work_email,days,comment\nperson01@example.test,4.5,\n";

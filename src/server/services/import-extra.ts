@@ -3,7 +3,7 @@ import { isIsoDate, parseIsoDate } from "@/lib/dates";
 import { audit } from "@/server/audit";
 import type { Actor } from "@/server/authz/actor";
 import type { Tx } from "@/server/db";
-import { round1, syncBalance } from "@/server/absences/balance";
+import { round1, syncTypeBalance } from "@/server/absences/balance";
 
 /** Initial import kinds added in phase 2 (PRD 7): starting balances, granted access, equipment. */
 
@@ -28,9 +28,11 @@ const balanceRow = z.object({
   work_email: z.string().toLowerCase().email(),
   days: z.coerce.number().min(-366).max(366),
   comment: z.string().optional(),
+  /** phase 6: code of the absence type (empty = vacation) */
+  absence_type: z.string().trim().optional(),
 });
 
-/** One starting balance per person (key = person). Re-importing the same number changes nothing; another number is an error. */
+/** One starting balance per person and absence type (key = person + type). Re-importing the same number changes nothing; another number is an error. */
 export async function importBalances(tx: Tx, actor: Actor, rows: Raw[]): Promise<PreviewRow[]> {
   const result: PreviewRow[] = [];
   for (const [i, raw] of rows.entries()) {
@@ -49,7 +51,15 @@ export async function importBalances(tx: Tx, actor: Actor, rows: Raw[]): Promise
       row.action = "error";
       continue;
     }
-    const key = `import-initial:${e.id}`;
+    const typeCode = r.absence_type || "vacation";
+    const type = await tx.absenceType.findFirst({ where: { code: typeCode, deletedAt: null } });
+    if (!type) {
+      row.errors.push(`absence_type: "${typeCode}" not found`);
+      row.action = "error";
+      continue;
+    }
+    // vacation keeps the phase 2 key, so a file imported before phase 6 is still recognised
+    const key = typeCode === "vacation" ? `import-initial:${e.id}` : `import-initial:${e.id}:${typeCode}`;
     const existing = await tx.absenceLedgerEntry.findUnique({ where: { idempotencyKey: key } });
     if (existing) {
       if (round1(Number(existing.amount)) !== round1(r.days)) {
@@ -58,7 +68,7 @@ export async function importBalances(tx: Tx, actor: Actor, rows: Raw[]): Promise
       }
       continue;
     }
-    const { policy } = await syncBalance(tx, e.id);
+    const { policy } = await syncTypeBalance(tx, e.id, type.id);
     const balance = policy ? await tx.absenceBalance.findFirst({ where: { employeeId: e.id, policyId: policy.id }, orderBy: { periodStart: "desc" } }) : null;
     if (!policy || !balance) {
       row.errors.push(policy ? "no hire date — the balance period is unknown" : "no absence policy for this person");

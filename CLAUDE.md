@@ -16,6 +16,8 @@ at the start of a phase propose a task plan and schema changes, write code after
   "Команда" / "Компанії й фінанси" blocks shown by permission; phone layout checked at 375 px on every page.
 - **Phase 5 — Telegram bot: done locally** (plan: `docs/phase-5-plan.md`). Tested with a fake Bot API transport;
   real delivery needs a bot from @BotFather (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`) — not created yet.
+- **Phase 6 — PTO per type: done locally** (plan: `docs/phase-6-plan.md`, Vlad's PTO policy of 14.05.2026). Acceptance
+  tests in `tests/pto.test.ts`. Existing databases: `npx prisma migrate deploy` then `npm run db:upgrade`.
 - All PRD phases are built locally. Not deployed anywhere: hosting, Entra ID registration and the bot token are open.
 - From 2026-10-21 Vlad asked to run the remaining phases back to back: plan → build → tests → commit + push → next phase,
   without waiting for a plan approval. Decisions are recorded in `docs/phase-N-plan.md` and below.
@@ -115,8 +117,8 @@ npm run lint && npm run typecheck
 | 27 | Asset history: returning keeps the last holder (`assignedToId`) and sets `returnedAt`; full history is in the audit log. | No extra entity (PRD rule 3). |
 | 28 | Additions in phase 2: `CalendarEvent.nonWorking` (per-event override), `Company/Department.absencePolicyId` (policy assignment), ledger type `carryover`, `AbsenceBalance` = one accrual period, `idempotency_key`, `User.calendarToken`, permission `balances.adjust`. | PRD 5 text requires per-event flags and company/department assignment. |
 | 29 | Ukrainian holidays are seeded **informational** (martial law: working days) — Legal decides, superadmin flips the flag. US Federal is non-working for Columbus, OH. Holiday dates are demo data. | PRD 5 / open question. |
-| 30 | One balance pool per person = effective policy (person → department up the tree → company). | Phase 2 plan, decision 4. |
-| 31 | Approval steps of an absence are skipped when the type needs no approval; absences of the type "sick leave" need a document. | Phase 2 plan, decision 10. |
+| 30 | ~~One balance pool per person~~ — replaced by decision 48 (one balance per absence type). | Phase 2 plan, decision 4; phase 6. |
+| 31 | Approval steps of an absence are skipped when the type needs no approval. ~~Sick leave needs a document~~ — phase 6: no document required (Vlad). | Phase 2 plan, decision 10. |
 | 32 | `subject_dept_head` / `initiator_dept_head` never resolve to the person themselves: a head's own request goes to the head of the parent department (or needs assignment). | A head must not approve their own request. |
 | 33 | SLA due dates use the assignee's calendar (work week + non-working layers) — phase 1's Mon–Fri is the fallback. | PRD 4: "SLA рахується в робочих днях за календарними шарами виконавця". |
 | 34 | Initial import also covers starting balances (`manual_adjustment` "початковий залишок"), granted access and assets. | PRD 7. |
@@ -133,6 +135,13 @@ npm run lint && npm run typecheck
 | 45 | Telegram link: one-time code (15 min) from the profile → `/start <code>` in the bot; `/stop` or the profile button unlinks. Bot updates by long polling in the worker, or a webhook `/api/telegram/webhook` when `TELEGRAM_WEBHOOK_SECRET` is set. | Works without a public URL. |
 | 46 | Additions in phase 5: `User.telegramChatId/telegramLinkCode/telegramLinkExpires/notificationPrefs`, notification delivery fields, in-app bell and `/notifications` page. | PRD 3 lists channel in_app. |
 | 47 | UI follows the Figma file "Client Cabinet", page "Admin - Desktop" (node 145:2): navy 218–232 px sidebar with pill links and a red "Нова заявка" button, white top bar (people search, language, bell), #F4F4F4 content, 18 px cards, pill buttons/badges/inputs, red tabs, KPI cards with a coloured top edge. Font Satoshi (self-hosted, `src/app/fonts`) with Manrope as the Cyrillic fallback (Satoshi has no Cyrillic); icons Hugeicons (free set). Sign-in uses a navy brand panel instead of the truck photo. | Design request from Vlad, 2026-10-21. |
+| 48 | **One balance per absence type.** `AbsencePolicy.absenceTypeId`; assignments per type in `AbsencePolicyAssignment` (person → department chain → company → the type's `isDefault` policy); `AbsenceBalance.absenceTypeId`. Contractors (`employmentType = contractor`) have no PTO: no policy, no balance, absences are only recorded. | Vlad, 2026-10-21 (option A); PTO policy: "contractors do not accrue PTO". |
+| 49 | PTO types from the policy: Paid Vacation, Wellness Day, Remote Day (`countsAsWorking`, period `month`), Paid Sick Leave, Specific Reason (no balance, max 3 days), Unpaid Vacation; Day off stays without a balance. Default policies are the base values (IC, year 1); grades and years of service are configured by the superadmin with more policies. Paid Vacation needs 1 year (`availableAfterDays = 365`). | Vlad: "типи відпусток шоб відображались, я решту налаштую". |
+| 50 | **Policy rules never block** — min/max days, service, balance, missing document, contractor are warnings shown to approvers (`absences/insight.ts`). Only broken data is refused: dates order, overlap with an approved absence, no working days, half day on several days. Balances may go negative. Submission deadlines are not checked yet (later: warning only). | Vlad, 2026-10-21: "все решта не блокуємо взагалі, всяке може бути в людей". |
+| 51 | Absence requests show **days since the last approved absence of the same type** (card and new-request form). | Vlad, 2026-10-21. |
+| 52 | Absence approval: one group, two steps — `subject_manager` (direct manager from the profile, else the department head) and `role_first_free(head_of_people)`. `role_first_free` never picks the request's subject or someone already assigned in the same group; Head of People falls back to CEO. New system role `head_of_people`. | PTO policy: approved only when both confirm; Vlad: two different people. |
+| 53 | `Employee.grade` (Senior / Middle / First-line Management, Individual Contributor) — full profile only, editable in the card and the CSV import. | Vlad, 2026-10-21. |
+| 54 | `npm run db:upgrade` (`scripts/upgrade-reference-data.ts`) brings reference data of an existing database up to date; it changes only untouched starter values. | No re-running of the seed on real data. |
 
 ## Open questions (from PRD 9 + new)
 

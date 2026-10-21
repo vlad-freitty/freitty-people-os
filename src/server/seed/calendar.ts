@@ -19,17 +19,45 @@ export async function ensureSystemLayers(prisma: PrismaClient) {
   }
 }
 
+/**
+ * PTO types from the "PTO and Benefits Policy" (phase 6). Day off is not in the policy but stays (Vlad, 2026-10-21);
+ * it no longer draws from the vacation pool. Remote Day is a working day (countsAsWorking).
+ */
 export const STARTER_ABSENCE_TYPES = [
-  { code: "vacation", nameUk: "Відпустка", nameEn: "Vacation", color: "#1f7a4d", paid: true, deductsBalance: true, requiresDocument: false, requiresApproval: true, allowHalfDay: false },
-  { code: "sick_leave", nameUk: "Лікарняний", nameEn: "Sick leave", color: "#b45309", paid: true, deductsBalance: false, requiresDocument: true, requiresApproval: false, allowHalfDay: false },
-  { code: "unpaid", nameUk: "За свій рахунок", nameEn: "Unpaid leave", color: "#4a4852", paid: false, deductsBalance: false, requiresDocument: false, requiresApproval: true, allowHalfDay: false },
-  { code: "day_off", nameUk: "Day off", nameEn: "Day off", color: "#2563eb", paid: true, deductsBalance: true, requiresDocument: false, requiresApproval: true, allowHalfDay: true, maxDays: 1 },
+  { code: "vacation", nameUk: "Оплачувана відпустка", nameEn: "Paid Vacation", color: "#1f7a4d", paid: true, deductsBalance: true, requiresDocument: false, requiresApproval: true, allowHalfDay: false },
+  { code: "wellness_day", nameUk: "Wellness Day (день відновлення)", nameEn: "Wellness Day", color: "#0d9488", paid: true, deductsBalance: true, requiresDocument: false, requiresApproval: true, allowHalfDay: false, maxDays: 1 },
+  { code: "remote_day", nameUk: "Віддалений день", nameEn: "Remote Day", color: "#0052b4", paid: true, deductsBalance: true, requiresDocument: false, requiresApproval: true, allowHalfDay: false, countsAsWorking: true },
+  { code: "sick_leave", nameUk: "Оплачуваний лікарняний", nameEn: "Paid Sick Leave", color: "#b45309", paid: true, deductsBalance: true, requiresDocument: false, requiresApproval: false, allowHalfDay: false },
+  { code: "specific_reason", nameUk: "Оплачувана відпустка з особливої причини", nameEn: "Paid Leave — Specific Reason", color: "#7c3aed", paid: true, deductsBalance: false, requiresDocument: false, requiresApproval: true, allowHalfDay: false, maxDays: 3 },
+  { code: "unpaid", nameUk: "Відпустка за свій рахунок", nameEn: "Unpaid Vacation", color: "#4a4852", paid: false, deductsBalance: true, requiresDocument: false, requiresApproval: true, allowHalfDay: false, maxDays: 3 },
+  { code: "day_off", nameUk: "Day off", nameEn: "Day off", color: "#2563eb", paid: true, deductsBalance: false, requiresDocument: false, requiresApproval: true, allowHalfDay: true, maxDays: 1 },
 ];
+
+/** Names and flags the phase 2 seed used — a type still carrying them is upgraded, an edited one is left alone. */
+const PHASE2_TYPES: Record<string, { nameUk: string; nameEn: string; deductsBalance: boolean; requiresDocument: boolean }> = {
+  vacation: { nameUk: "Відпустка", nameEn: "Vacation", deductsBalance: true, requiresDocument: false },
+  sick_leave: { nameUk: "Лікарняний", nameEn: "Sick leave", deductsBalance: false, requiresDocument: true },
+  unpaid: { nameUk: "За свій рахунок", nameEn: "Unpaid leave", deductsBalance: false, requiresDocument: false },
+  day_off: { nameUk: "Day off", nameEn: "Day off", deductsBalance: true, requiresDocument: false },
+};
 
 export async function ensureAbsenceTypes(prisma: PrismaClient) {
   for (const t of STARTER_ABSENCE_TYPES) {
-    if (await prisma.absenceType.findUnique({ where: { code: t.code } })) continue;
-    await prisma.absenceType.create({ data: t });
+    const existing = await prisma.absenceType.findUnique({ where: { code: t.code } });
+    if (!existing) {
+      await prisma.absenceType.create({ data: t });
+      continue;
+    }
+    const old = PHASE2_TYPES[t.code];
+    if (
+      old &&
+      existing.nameUk === old.nameUk &&
+      (existing.nameEn ?? "") === old.nameEn &&
+      existing.deductsBalance === old.deductsBalance &&
+      existing.requiresDocument === old.requiresDocument
+    ) {
+      await prisma.absenceType.update({ where: { id: existing.id }, data: t });
+    }
   }
 }
 
@@ -45,6 +73,42 @@ export const FREITTY_STANDARD = {
   allowNegative: false,
   countDays: "working",
 } as const;
+
+type PolicySeed = Omit<typeof FREITTY_STANDARD, "periodStart" | "availableAfterDays" | "daysPerPeriod" | "name" | "accrual"> & {
+  name: string;
+  daysPerPeriod: number;
+  accrual: "upfront" | "monthly";
+  periodStart: "hire_date" | "jan_1" | "month";
+  availableAfterDays: number;
+};
+
+/**
+ * Default policy per PTO type (phase 6) — base values from the PTO & Benefits Guide (Individual Contributor, year 1).
+ * No accrual over time, no carryover, unused days expire at the end of the period; grades and years of service are
+ * configured by the superadmin with more policies. Created only when the type has no policy yet.
+ */
+export const DEFAULT_PTO_POLICIES: Record<string, PolicySeed> = {
+  vacation: { ...FREITTY_STANDARD, availableAfterDays: 365 },
+  wellness_day: { ...FREITTY_STANDARD, name: "Wellness Day — базова", daysPerPeriod: 1, availableAfterDays: 0 },
+  remote_day: { ...FREITTY_STANDARD, name: "Remote Day — базова", daysPerPeriod: 1, periodStart: "month", availableAfterDays: 0 },
+  sick_leave: { ...FREITTY_STANDARD, name: "Paid Sick Leave — базова", daysPerPeriod: 2, availableAfterDays: 0 },
+  unpaid: { ...FREITTY_STANDARD, name: "Unpaid Vacation — базова", daysPerPeriod: 5, availableAfterDays: 182 },
+};
+
+export async function ensurePtoPolicies(prisma: PrismaClient) {
+  for (const [code, data] of Object.entries(DEFAULT_PTO_POLICIES)) {
+    const type = await prisma.absenceType.findUnique({ where: { code } });
+    if (!type) continue;
+    if (await prisma.absencePolicy.findFirst({ where: { absenceTypeId: type.id, deletedAt: null } })) {
+      // the phase 2 standard policy became the vacation default in the migration: Paid Vacation needs one year (policy)
+      if (code === "vacation") {
+        await prisma.absencePolicy.updateMany({ where: { name: FREITTY_STANDARD.name, absenceTypeId: type.id, availableAfterDays: 0 }, data: { availableAfterDays: 365 } });
+      }
+      continue;
+    }
+    await prisma.absencePolicy.create({ data: { ...data, absenceTypeId: type.id, isDefault: true } });
+  }
+}
 
 type Holiday = [date: string, uk: string, en: string, yearly?: boolean];
 

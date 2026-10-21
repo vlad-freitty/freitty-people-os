@@ -7,9 +7,10 @@ import { api } from "./api";
 import { ErrorBox } from "./error-box";
 import { Button, Field } from "./ui";
 
-export function BalanceAdjustForm({ employeeId }: { employeeId: string }) {
+export function BalanceAdjustForm({ employeeId, types }: { employeeId: string; types: { id: string; name: string }[] }) {
   const t = useTranslations("balance");
   const router = useRouter();
+  const [absenceTypeId, setType] = useState(types[0]?.id ?? "");
   const [amount, setAmount] = useState("");
   const [comment, setComment] = useState("");
   const [error, setError] = useState<unknown>(null);
@@ -22,7 +23,7 @@ export function BalanceAdjustForm({ employeeId }: { employeeId: string }) {
         start(async () => {
           setError(null);
           try {
-            await api(`/employees/${employeeId}/balance`, { body: { amount: Number(amount), comment } });
+            await api(`/employees/${employeeId}/balance`, { body: { absenceTypeId, amount: Number(amount), comment } });
             setAmount("");
             setComment("");
             router.refresh();
@@ -34,6 +35,15 @@ export function BalanceAdjustForm({ employeeId }: { employeeId: string }) {
     >
       <p className="text-sm font-semibold">{t("adjust")}</p>
       <ErrorBox error={error} />
+      <Field label={t("type")}>
+        <select className="field" value={absenceTypeId} onChange={(e) => setType(e.target.value)}>
+          {types.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.name}
+            </option>
+          ))}
+        </select>
+      </Field>
       <div className="grid grid-cols-[1fr_2fr] gap-2">
         <Field label={t("amount")}>
           <input className="field" type="number" step="0.5" required value={amount} onChange={(e) => setAmount(e.target.value)} />

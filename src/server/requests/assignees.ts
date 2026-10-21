@@ -13,7 +13,12 @@ type Ctx = {
   /** department the request is about (subject's, or the department field of a hiring request) */
   subjectDepartmentId: string | null;
   systemOwnerId?: string | null;
+  /** people already assigned in the same step group — two approvals must come from two different people (phase 6) */
+  exceptIds?: string[];
 };
+
+/** A role with nobody else to take the step hands it to another role (phase 6: Head of People → CEO). */
+const ROLE_FALLBACK: Record<string, string> = { head_of_people: "ceo" };
 
 const ACTIVE_PERSON = { deletedAt: null, status: { not: "left" as const } };
 
@@ -32,6 +37,14 @@ export async function resolveAssignee(tx: Tx, rule: AssigneeRule, value: string 
     }
     case "subject_dept_head":
       return ctx.subjectDepartmentId ? nearestHead(tx, ctx.subjectDepartmentId, ctx.subjectEmployeeId) : null;
+    case "subject_manager": {
+      // the direct manager from the profile; without one — the department head, as before
+      if (!ctx.subjectEmployeeId) return null;
+      const subject = await tx.employee.findUnique({ where: { id: ctx.subjectEmployeeId }, select: { manager: { select: { id: true, deletedAt: true, status: true } } } });
+      const m = subject?.manager;
+      if (m && !m.deletedAt && m.status !== "left" && m.id !== ctx.subjectEmployeeId) return m.id;
+      return ctx.subjectDepartmentId ? nearestHead(tx, ctx.subjectDepartmentId, ctx.subjectEmployeeId) : null;
+    }
     case "system_owner": {
       if (!ctx.systemOwnerId) return null;
       const e = await tx.employee.findFirst({ where: { id: ctx.systemOwnerId, ...ACTIVE_PERSON }, select: { id: true } });
@@ -39,11 +52,17 @@ export async function resolveAssignee(tx: Tx, rule: AssigneeRule, value: string 
     }
     case "role_first_free": {
       if (!value) return null;
-      const people = await tx.employee.findMany({
-        where: { ...ACTIVE_PERSON, user: { isActive: true, deletedAt: null, role: { code: value } } },
-        select: { id: true },
-      });
-      return leastLoaded(tx, people.map((p) => p.id));
+      // never the person the request is about, never someone who already has a step of this group
+      const except = [ctx.subjectEmployeeId, ...(ctx.exceptIds ?? [])].filter((x): x is string => !!x);
+      for (const code of [value, ROLE_FALLBACK[value]].filter(Boolean)) {
+        const people = await tx.employee.findMany({
+          where: { ...ACTIVE_PERSON, id: { notIn: except }, user: { isActive: true, deletedAt: null, role: { code } } },
+          select: { id: true },
+        });
+        const id = await leastLoaded(tx, people.map((p) => p.id));
+        if (id) return id;
+      }
+      return null;
     }
   }
 }

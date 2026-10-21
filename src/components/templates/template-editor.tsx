@@ -13,7 +13,7 @@ type Option = { value: string; labelUk: string; labelEn?: string | null };
 type Source = "departments" | "absence_types";
 type FieldDraft = { key: string; labelUk: string; labelEn?: string | null; type: FieldType; options?: Option[] | { source: Source } | null; required: boolean };
 type StepType = "approve" | "task" | "fill" | "document" | "child_request";
-type Rule = "person" | "initiator" | "initiator_dept_head" | "subject_dept_head" | "system_owner" | "role_first_free";
+type Rule = "person" | "initiator" | "initiator_dept_head" | "subject_dept_head" | "subject_manager" | "system_owner" | "role_first_free";
 type StepDraft = {
   orderGroup: number;
   nameUk: string;
@@ -33,7 +33,7 @@ type Who = { mode: "all" } | { mode: "departments"; departmentIds: string[] } | 
 
 const FIELD_TYPES: FieldType[] = ["text", "textarea", "number", "date", "date_range", "select", "multiselect", "person", "file", "systems"];
 const STEP_TYPES: StepType[] = ["approve", "task", "fill", "document", "child_request"];
-const RULES: Rule[] = ["person", "initiator", "initiator_dept_head", "subject_dept_head", "system_owner", "role_first_free"];
+const RULES: Rule[] = ["person", "initiator", "initiator_dept_head", "subject_dept_head", "subject_manager", "system_owner", "role_first_free"];
 const DOC_TYPES = ["contract", "nda", "act", "invoice", "w9", "other"] as const;
 
 export type EditorProps = {

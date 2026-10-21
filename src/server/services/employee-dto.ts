@@ -53,6 +53,7 @@ export function toFull(e: EmployeeRow) {
     location: e.location,
     manager: e.manager ? { id: e.manager.id, name: `${e.manager.firstName} ${e.manager.lastName}` } : null,
     employmentType: e.employmentType,
+    grade: e.grade,
     hireDate: toIsoDate(e.hireDate),
     probationEnd: toIsoDate(e.probationEnd),
     birthDate: toIsoDate(e.birthDate),
