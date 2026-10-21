@@ -18,6 +18,8 @@ export const PERMISSIONS = {
   /** payment periods, calculation, statuses, adjustments, finance export */
   "payments.manage": { scopes: ["all"], group: "money" },
   "org.manage": { scopes: ["all"], group: "admin" },
+  /** issue accounts (email + one-time password), reset passwords, deactivate (phase 7) */
+  "users.manage": { scopes: ["all"], group: "admin" },
   "roles.assign": { scopes: ["all"], group: "admin" },
   "roles.manage": { scopes: ["all"], group: "admin" },
   "import.run": { scopes: ["all"], group: "admin" },
@@ -81,7 +83,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Partial<Record<Permission,
     "shifts.manage": "departments",
   },
   user: USER_PERMISSIONS,
-  hr: USER_PERMISSIONS,
+  // HR issues accounts together with the superadmin (phase 7, Vlad)
+  hr: { ...USER_PERMISSIONS, "users.manage": "all" },
   // approves time off together with the direct manager (phase 6, PTO policy)
   head_of_people: USER_PERMISSIONS,
   legal: USER_PERMISSIONS,

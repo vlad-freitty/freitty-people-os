@@ -13,9 +13,12 @@ export type Actor = {
   /** departments the actor heads, including all sub-departments */
   headedDepartmentIds: string[];
   permissions: Map<Permission, PermissionScope>;
+  /** a one-time password is still in use: every page and API call except changing it is refused (phase 7) */
+  mustChangePassword: boolean;
 };
 
-export async function loadActor(userId: string): Promise<Actor> {
+/** sessionVersion: from the session token — a mismatch means the password was reset or the account deactivated since. */
+export async function loadActor(userId: string, sessionVersion?: number): Promise<Actor> {
   const user = await prisma.user.findFirst({
     where: { id: userId, isActive: true, deletedAt: null },
     include: {
@@ -24,6 +27,7 @@ export async function loadActor(userId: string): Promise<Actor> {
     },
   });
   if (!user || user.role.deletedAt) throw new UnauthorizedError();
+  if (sessionVersion !== undefined && sessionVersion !== user.sessionVersion) throw new UnauthorizedError();
 
   const isSuperadmin = user.role.code === SUPERADMIN_ROLE;
   const permissions = new Map<Permission, PermissionScope>();
@@ -46,6 +50,7 @@ export async function loadActor(userId: string): Promise<Actor> {
     employeeId: employee?.id ?? null,
     headedDepartmentIds: await withDescendants(directHeads),
     permissions,
+    mustChangePassword: user.mustChangePassword,
   };
 }
 

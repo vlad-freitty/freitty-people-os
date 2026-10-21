@@ -37,23 +37,26 @@
     "settings": "Settings",
     "shifts": "Shifts",
     "payments": "Payments",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "access": "Access"
   },
   "login": {
     "title": "Sign in to People OS",
     "subtitle": "Internal system of FREITTY · NETQOR · YBIS",
-    "microsoft": "Sign in with Microsoft",
-    "microsoftNotConfigured": "Microsoft sign-in is not configured yet (an Entra ID app registration is required).",
     "devTitle": "Dev login (local only)",
     "devHint": "Pick a seeded test user. Disabled in production.",
     "errors": {
-      "not_registered": "This account is not in the employee registry. Please contact HR.",
-      "inactive": "This account is deactivated.",
-      "default": "Sign-in failed. Please try again."
+      "invalid": "Wrong email or password. After 5 failed attempts sign-in is locked for 15 minutes.",
+      "locked": "Too many failed attempts. Sign-in is locked for 15 minutes — try later or contact HR.",
+      "default": "Could not sign in. Please try again."
     },
     "welcome": "Welcome back",
     "panelTitle": "People, requests and payments in one place",
-    "panelText": "Onboarding, time off, shifts, access and equipment for the whole holding team."
+    "panelText": "Onboarding, time off, shifts, access and equipment for the whole holding team.",
+    "email": "Work email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "forgot": "Forgot your password? Ask HR or an administrator for a new one."
   },
   "dashboard": {
     "greeting": "Welcome, {name}",
@@ -235,6 +238,9 @@
     },
     "payments": {
       "manage": "Payment periods, calculation, export"
+    },
+    "users": {
+      "manage": "Issue accounts, reset passwords"
     }
   },
   "import": {
@@ -887,5 +893,52 @@
     "middle_management": "Middle Management",
     "first_line_management": "First-line Management",
     "individual_contributor": "Individual Contributor"
+  },
+  "password": {
+    "title": "Change password",
+    "subtitle": "The new password works right away; other sessions end.",
+    "mustChange": "You signed in with a one-time password. Choose your own to continue.",
+    "current": "Current password",
+    "next": "New password",
+    "confirm": "Repeat the new password",
+    "rules": "At least {n} characters; avoid parts of your email and obvious passwords.",
+    "save": "Save and sign in",
+    "errors": {
+      "mismatch": "The passwords do not match.",
+      "wrong_password": "The current password is wrong.",
+      "same_as_current": "The new password must differ from the current one.",
+      "too_short": "Too short — at least {n} characters.",
+      "too_long": "The password is too long.",
+      "too_common": "This password is too simple.",
+      "contains_email": "The password must not contain your email.",
+      "invalid": "Could not change the password."
+    }
+  },
+  "access": {
+    "title": "Access",
+    "subtitle": "Issue accounts: an employee card plus a one-time password that must be changed at the first sign-in.",
+    "new": "New access",
+    "accounts": "Accounts ({n})",
+    "email": "Work email (login)",
+    "role": "Role in the system",
+    "generate": "Create and generate password",
+    "generateShort": "Generate password",
+    "passwordTitle": "Password (shown once)",
+    "shownOnce": "Copy the password for {email} now — it cannot be shown again. Share it through a secure channel; the system asks to change it at the first sign-in.",
+    "copy": "Copy to clipboard",
+    "copied": "Copied",
+    "close": "Close",
+    "person": "Person",
+    "status": "Status",
+    "lastLogin": "Last sign-in",
+    "inactive": "deactivated",
+    "noPassword": "no password",
+    "pendingChange": "password change pending",
+    "active": "active",
+    "locked": "locked for 15 min",
+    "never": "never",
+    "reset": "Reset password",
+    "deactivate": "Deactivate",
+    "activate": "Activate"
   }
 }

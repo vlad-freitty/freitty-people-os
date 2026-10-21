@@ -2,15 +2,17 @@ import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import type { Actor } from "@/server/authz/actor";
 import { getActor } from "@/server/auth/session";
-import { AppError } from "@/server/errors";
+import { AppError, ForbiddenError } from "@/server/errors";
 
 type Ctx<P> = { actor: Actor; req: Request; params: P };
 
 /** Every API route goes through here: session → actor → service → JSON. Services do the permission checks. */
-export function route<P = Record<string, never>>(fn: (ctx: Ctx<P>) => Promise<unknown>) {
+export function route<P = Record<string, never>>(fn: (ctx: Ctx<P>) => Promise<unknown>, opts: { allowWithTemporaryPassword?: boolean } = {}) {
   return async (req: Request, context: { params: Promise<P> }) => {
     try {
       const actor = await getActor();
+      // phase 7: with a one-time password only the password change itself is allowed
+      if (actor.mustChangePassword && !opts.allowWithTemporaryPassword) throw new ForbiddenError("password_change_required");
       const result = await fn({ actor, req, params: await context.params });
       return result === undefined ? new Response(null, { status: 204 }) : Response.json({ data: result });
     } catch (err) {

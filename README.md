@@ -1,7 +1,7 @@
 # FREITTY People OS
 
 Internal HR system for the Octopos holding (FREITTY, NETQOR, YBIS). Next.js 15 + TypeScript, PostgreSQL + Prisma,
-Auth.js (Microsoft Entra ID), next-intl (UA/EN), Tailwind, Vitest.
+Auth.js (email + password), next-intl (UA/EN), Tailwind, Vitest.
 
 ## Quick start (Windows, no Docker needed)
 
@@ -11,7 +11,7 @@ cp .env.example .env          # set AUTH_SECRET (any long random string)
 npm run db                    # terminal 1: local PostgreSQL on :5433, keep it running
 npx prisma migrate deploy     # terminal 2
 npm run db:seed
-npm run dev                   # http://localhost:3000 → "Dev login" → pick a user
+npm run dev                   # http://localhost:3000 → "Dev login" → pick a user (or npm run admin:create)
 npm run worker                # background jobs: daily balances, overdue notices, Telegram bot
 ```
 
@@ -28,9 +28,11 @@ npm test        # needs `npm run db` running; uses the people_os_test database
 
 ## Production
 
-- Set `AUTH_MICROSOFT_ENTRA_ID_ID`, `AUTH_MICROSOFT_ENTRA_ID_SECRET`,
-  `AUTH_MICROSOFT_ENTRA_ID_ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0`, `AUTH_SECRET`, `AUTH_URL`,
-  `DATABASE_URL`, `SUPERADMIN_EMAIL`. `DEV_LOGIN` has no effect in production.
+- Set `AUTH_SECRET`, `AUTH_URL` (https), `DATABASE_URL`. `DEV_LOGIN` has no effect in production.
+- First admin (on the server, once): `npm run admin:create -- --email admin@company.com --name "First Last"` prints a
+  one-time password; sign in and set your own. Everyone else gets access from **Доступи** (`/access`, superadmin and HR).
+  Forgotten admin password: `npm run admin:create -- --email admin@company.com --reset`.
+- After an update of an existing database: `npx prisma migrate deploy`, then `npm run db:upgrade`.
 - `docker build -t people-os .` — the container runs `prisma migrate deploy` on start.
 - Run the worker next to the web container: `docker build --target worker -t people-os-worker .` — daily balances, overdue notices,
   Telegram delivery. Telegram needs `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` (see `.env.example`).

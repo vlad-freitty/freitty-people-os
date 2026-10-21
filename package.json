@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "worker": "tsx scripts/worker.ts",
-    "db:upgrade": "tsx scripts/upgrade-reference-data.ts"
+    "db:upgrade": "tsx scripts/upgrade-reference-data.ts",
+    "admin:create": "tsx scripts/admin-create.ts"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",

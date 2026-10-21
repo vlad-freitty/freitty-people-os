@@ -93,7 +93,7 @@ function visibleLevel(actor: Actor, row: { id: string; departmentId: string; sta
   return level;
 }
 
-async function resolveRefs(input: Partial<EmployeeInput>) {
+export async function resolveRefs(input: Partial<EmployeeInput>) {
   const errors: Record<string, string> = {};
   let companyId: string | undefined;
   if (input.departmentId) {
@@ -113,7 +113,7 @@ async function resolveRefs(input: Partial<EmployeeInput>) {
   return { companyId };
 }
 
-function toData(input: Partial<EmployeeInput>) {
+export function toData(input: Partial<EmployeeInput>) {
   const date = (v: string | null | undefined) => (v === undefined ? undefined : v === null ? null : parseIsoDate(v));
   return {
     firstName: input.firstName,

@@ -9,6 +9,7 @@ import {
   FileEditIcon,
   FileImportIcon,
   HierarchySquare01Icon,
+  Key01Icon,
   LaptopIcon,
   Layers01Icon,
   Logout01Icon,
@@ -45,6 +46,7 @@ const icons = {
   roles: UserShield01Icon,
   import: FileImportIcon,
   audit: AuditIcon,
+  access: Key01Icon,
   settings: Settings02Icon,
 };
 
@@ -61,6 +63,7 @@ type Labels = {
   newRequest: string;
   bell: string;
   signOut: string;
+  changePassword: string;
 };
 
 const isActive = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
@@ -168,6 +171,14 @@ export function AppShell({
               <span className="block truncate text-sm font-medium text-ink">{user.name}</span>
               <span className="block truncate text-xs text-ink-mute">{user.email}</span>
             </span>
+            <Link
+              href="/change-password"
+              aria-label={labels.changePassword}
+              title={labels.changePassword}
+              className="flex size-10 shrink-0 items-center justify-center rounded-full border border-edge text-ink-soft transition hover:border-ink hover:text-ink"
+            >
+              <HugeiconsIcon icon={Key01Icon} size={18} />
+            </Link>
             <form action={signOutAction}>
               <button
                 type="submit"

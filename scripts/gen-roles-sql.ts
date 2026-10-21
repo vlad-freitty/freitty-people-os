@@ -1,6 +1,6 @@
 // Usage: npx tsx scripts/gen-roles-sql.ts > prisma/migrations/<new>/migration.sql (edit NEW_PERMISSIONS first)
 import { DEFAULT_ROLE_PERMISSIONS, SYSTEM_ROLES } from "../src/server/authz/permissions";
-const NEW_PERMISSIONS: string[] = [];
+const NEW_PERMISSIONS: string[] = ["users.manage"];
 const q = (s: string | null) => (s === null ? "NULL" : `'${s.replace(/'/g, "''")}'`);
 const out: string[] = ["-- System roles + default permissions (generated from src/server/authz/permissions.ts).",
   "-- Creates missing system roles with defaults; adds the permissions listed in NEW_PERMISSIONS to existing roles.", ""];

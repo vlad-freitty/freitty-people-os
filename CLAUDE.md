@@ -18,7 +18,9 @@ at the start of a phase propose a task plan and schema changes, write code after
   real delivery needs a bot from @BotFather (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`) — not created yet.
 - **Phase 6 — PTO per type: done locally** (plan: `docs/phase-6-plan.md`, Vlad's PTO policy of 14.05.2026). Acceptance
   tests in `tests/pto.test.ts`. Existing databases: `npx prisma migrate deploy` then `npm run db:upgrade`.
-- All PRD phases are built locally. Not deployed anywhere: hosting, Entra ID registration and the bot token are open.
+- **Phase 7 — Email + password sign-in: done locally** (plan: `docs/phase-7-plan.md`). Acceptance tests in `tests/auth.test.ts`.
+  First admin: `npm run admin:create -- --email … --name "…"`; everyone else gets access in `/access`.
+- All PRD phases are built locally. Not deployed anywhere: hosting and the bot token are open.
 - From 2026-10-21 Vlad asked to run the remaining phases back to back: plan → build → tests → commit + push → next phase,
   without waiting for a plan approval. Decisions are recorded in `docs/phase-N-plan.md` and below.
 
@@ -88,9 +90,9 @@ npm run lint && npm run typecheck
 
 | # | Decision | Why / who |
 |---|----------|-----------|
-| 1 | **Microsoft Entra ID SSO instead of Google SSO.** `User.entraOid` replaces `google_sub`. Single-tenant issuer → only corporate accounts. | Vlad, 2026-10-20: the company signs in with corporate Microsoft accounts. Needs an Entra app registration (tenant id, client id, secret) → env `AUTH_MICROSOFT_ENTRA_ID_*`. |
-| 2 | Sign-in is allowed only for an existing User, an Employee whose `work_email` matches (User created with role `user`), or `SUPERADMIN_EMAIL`. Unknown emails are rejected. | PRD 2: roles are assigned by the superadmin; no self-registration. |
-| 3 | **Dev login** (pick a seeded user, no password) when `NODE_ENV !== production` and `DEV_LOGIN=true`. | Local work and tests before Entra is registered. Never enabled in production builds. |
+| 1 | ~~Microsoft Entra ID SSO~~ — replaced in phase 7 by email + password (decision 55). `User.entraOid` and the provider are removed. | Vlad, 2026-10-20; reversed 2026-10-21. |
+| 2 | ~~Sign-in for any Employee whose work email matches / `SUPERADMIN_EMAIL`~~ — phase 7: only accounts issued by an admin or `npm run admin:create` can sign in (decision 56). | PRD 2: no self-registration. |
+| 3 | **Dev login** (pick a seeded user, no password) when `NODE_ENV !== production` and `DEV_LOGIN=true`. | Local work and tests. Never enabled in production builds. |
 | 4 | **Configurable roles**: new entities `Role`, `RolePermission`; `User.roleId` replaces the `role` enum. Permission catalog is code (`src/server/authz/permissions.ts`), the role → permission → scope matrix is edited by the superadmin in `/roles`. | Vlad, 2026-10-20: "суперадмін може налаштовувати всім права". |
 | 5 | **CEO = all permissions** (seed default; editable). Superadmin role is locked to all permissions. Only a superadmin can grant/revoke the superadmin role; the last active superadmin cannot be demoted. | Vlad, 2026-10-20 (closes PRD open question on CEO rights). Guards prevent lockout / privilege escalation. |
 | 6 | Scopes are nested `all ⊃ departments ⊃ self`; `departments` = departments the person heads **including sub-departments**, plus own profile. | Vlad confirmed sub-departments, 2026-10-20. |
@@ -142,14 +144,17 @@ npm run lint && npm run typecheck
 | 52 | Absence approval: one group, two steps — `subject_manager` (direct manager from the profile, else the department head) and `role_first_free(head_of_people)`. `role_first_free` never picks the request's subject or someone already assigned in the same group; Head of People falls back to CEO. New system role `head_of_people`. | PTO policy: approved only when both confirm; Vlad: two different people. |
 | 53 | `Employee.grade` (Senior / Middle / First-line Management, Individual Contributor) — full profile only, editable in the card and the CSV import. | Vlad, 2026-10-21. |
 | 54 | `npm run db:upgrade` (`scripts/upgrade-reference-data.ts`) brings reference data of an existing database up to date; it changes only untouched starter values. | No re-running of the seed on real data. |
+| 55 | **Sign-in = work email + password** (Auth.js Credentials `password`). scrypt hashes (`server/auth/password.ts`, N=2^15). 5 wrong passwords in a row lock the account for 15 min; unknown email, wrong password and inactive account give the same answer. No 2FA (Vlad: extra cost). No self-service reset: HR/admin issues a new one-time password. | Vlad, 2026-10-21. |
+| 56 | Accounts are issued in **Доступи** (`/access`, permission `users.manage`: superadmin and HR by default): email, name, role, department, position, type, start date (+ manager, grade, location) → the employee card and the account are created together, a 16-character one-time password is shown once. An existing card with that email gets the account linked. HR never issues or touches a superadmin. | Vlad: "одразу все", "hr теж". |
+| 57 | One-time password → `mustChangePassword`: every page redirects to `/change-password`, every API call answers 403 `password_change_required`. A password change, reset or deactivation bumps `User.sessionVersion` (stored in the JWT as `sv`) and ends every other session. | Vlad: "система після першого логування має вимагати зміни паролю". |
+| 58 | First superadmin: `npm run admin:create -- --email … --name "…"` on the server (no web sign-up); refuses when a superadmin exists unless `--force`; `--reset` gives a superadmin a new one-time password. `SUPERADMIN_EMAIL` is gone. | Vlad: "як завести першого головного адміна?" |
+| 59 | Operator, manager etc. are positions (free text), not roles: they get the role "Користувач" (the default in the form). | Vlad, 2026-10-21: same rights as a user. |
 
 ## Open questions (from PRD 9 + new)
 
 - [ ] Phase 5 — create the Telegram bot in @BotFather and put `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` into the environment; then check one real "new step" message.
 
 - [ ] Phase 0 — hosting, staging, where personal data physically lives (Сергій).
-- [ ] Phase 0 — Entra ID app registration: tenant id, client id, secret, redirect URI `https://<host>/api/auth/callback/microsoft-entra-id`.
-- [ ] Phase 0 — people without a corporate Microsoft account (e.g. contractors): local email+password accounts issued by the superadmin? Not built yet.
 - [x] Phase 1 — dept heads publish their department's templates themselves (decision 17).
 - [ ] Phase 1 — real list of systems and their owners (seed has placeholders); data retention after status `left` (Legal).
 - [ ] Phase 1 — S3-compatible bucket for documents in production (with hosting, Сергій).

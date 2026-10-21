@@ -8,7 +8,7 @@ export const getActor = cache(async (): Promise<Actor> => {
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) throw new UnauthorizedError();
-  return loadActor(userId);
+  return loadActor(userId, session.user.sv ?? 0);
 });
 
 export async function getActorOrNull(): Promise<Actor | null> {

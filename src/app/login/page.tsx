@@ -1,22 +1,34 @@
+import { CredentialsSignin, AuthError } from "next-auth";
 import { getLocale, getTranslations } from "next-intl/server";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { devLoginEnabled, entraEnabled, signIn } from "@/auth";
+import { devLoginEnabled, signIn } from "@/auth";
 import { Badge, Button } from "@/components/ui";
 import { localized } from "@/lib/format";
 import { listDevLoginUsers } from "@/server/auth/dev-users";
 import { getActorOrNull } from "@/server/auth/session";
 
-const ERRORS = ["not_registered", "inactive"] as const;
+const ERRORS = ["invalid", "locked"] as const;
 
-/** Sign-in from the Figma "Admin - Desktop" page: brand panel on the left, form column on the right. */
+async function passwordLogin(form: FormData) {
+  "use server";
+  try {
+    await signIn("password", { email: String(form.get("email") ?? ""), password: String(form.get("password") ?? ""), redirectTo: "/" });
+  } catch (err) {
+    // a successful sign-in throws Next's redirect — only Auth.js errors are handled here
+    if (err instanceof AuthError) redirect(`/login?error=${err instanceof CredentialsSignin && err.code === "locked" ? "locked" : "invalid"}`);
+    throw err;
+  }
+}
+
+/** Sign-in from the Figma "Admin - Desktop" page: brand panel on the left, email + password on the right (phase 7). */
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   if (await getActorOrNull()) redirect("/");
   const { error } = await searchParams;
   const t = await getTranslations("login");
   const tc = await getTranslations("common");
   const locale = await getLocale();
-  const devUsers = await listDevLoginUsers();
+  const devUsers = devLoginEnabled ? await listDevLoginUsers() : [];
   const errorKey = error ? ((ERRORS as readonly string[]).includes(error) ? `errors.${error}` : "errors.default") : null;
 
   return (
@@ -49,22 +61,20 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </div>
           )}
 
-          <div className="mt-8">
-            {entraEnabled ? (
-              <form
-                action={async () => {
-                  "use server";
-                  await signIn("microsoft-entra-id", { redirectTo: "/" });
-                }}
-              >
-                <Button type="submit" className="h-12 w-full">
-                  {t("microsoft")}
-                </Button>
-              </form>
-            ) : (
-              <p className="rounded-xl border border-line bg-cream px-4 py-3 text-sm text-ink-soft">{t("microsoftNotConfigured")}</p>
-            )}
-          </div>
+          <form action={passwordLogin} className="mt-8 space-y-4">
+            <label className="block">
+              <span className="label">{t("email")}</span>
+              <input className="field h-10" name="email" type="email" autoComplete="username" required autoFocus />
+            </label>
+            <label className="block">
+              <span className="label">{t("password")}</span>
+              <input className="field h-10" name="password" type="password" autoComplete="current-password" required />
+            </label>
+            <Button type="submit" className="h-12 w-full">
+              {t("signIn")}
+            </Button>
+            <p className="text-center text-xs text-ink-mute">{t("forgot")}</p>
+          </form>
 
           {devLoginEnabled && (
             <div className="mt-8 rounded-card border border-dashed border-warn/50 bg-warn-tint/40 p-5">

@@ -177,9 +177,19 @@ model Employee {
 
 model User {
   id                  String         @id @default(uuid()) @db.Uuid
-  /// Microsoft Entra ID object id (replaces google_sub from the PRD, see CLAUDE.md)
-  entraOid            String?        @unique
   email               String         @unique
+  /// name for accounts without an employee card (the first admin created by `npm run admin:create`)
+  displayName         String?
+  /// scrypt hash (phase 7: email + password sign-in); null = the account cannot sign in with a password yet
+  passwordHash        String?
+  /// set when an admin issued a one-time password: every page asks to change it first
+  mustChangePassword  Boolean        @default(false)
+  passwordChangedAt   DateTime?
+  /// technical: failed attempts in a row; 5 → lockedUntil = now + 15 min
+  failedLoginCount    Int            @default(0)
+  lockedUntil         DateTime?
+  /// technical: part of the session token — bumped on password reset / deactivation to end old sessions
+  sessionVersion      Int            @default(0)
   roleId              String         @db.Uuid
   role                Role           @relation(fields: [roleId], references: [id])
   isActive            Boolean        @default(true)

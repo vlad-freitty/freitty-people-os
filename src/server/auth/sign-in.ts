@@ -1,42 +1,45 @@
-import { SUPERADMIN_ROLE } from "@/server/authz/permissions";
 import { prisma } from "@/server/db";
+import { verifyPassword } from "./password";
 
-type SignInInput = { email: string; provider: "entra" | "dev"; entraOid?: string };
-type SignInResult = { ok: true; userId: string } | { ok: false; reason: "not_registered" | "inactive" };
+export type SignInResult = { ok: true; userId: string; sessionVersion: number } | { ok: false; reason: "invalid" | "locked" };
+
+export const MAX_FAILED_ATTEMPTS = 5;
+export const LOCK_MINUTES = 15;
 
 /**
- * Who may sign in:
- *  - an existing active User;
- *  - an Employee whose work_email matches (User is created with the default "user" role);
- *  - SUPERADMIN_EMAIL from env (first superadmin, PRD 2).
- * Anyone else is rejected — accounts are never created for unknown emails.
+ * Email + password sign-in (phase 7). Accounts are issued only by an admin (users.manage) or the
+ * `npm run admin:create` command — there is no self-registration. Five wrong passwords in a row lock the account for
+ * 15 minutes. The caller never learns whether the email exists: unknown email, wrong password and an inactive account
+ * look the same ("invalid").
  */
-export async function resolveSignIn(input: SignInInput): Promise<SignInResult> {
-  const email = input.email.trim().toLowerCase();
-  if (!email) return { ok: false, reason: "not_registered" };
+export async function passwordSignIn(rawEmail: string, password: string, now = new Date()): Promise<SignInResult> {
+  const email = rawEmail.trim().toLowerCase();
+  const user = email ? await prisma.user.findFirst({ where: { email, deletedAt: null } }) : null;
+  if (user?.lockedUntil && user.lockedUntil > now) return { ok: false, reason: "locked" };
 
-  let user = await prisma.user.findFirst({
-    where: { deletedAt: null, OR: [{ email }, ...(input.entraOid ? [{ entraOid: input.entraOid }] : [])] },
-  });
-
-  if (!user) {
-    // dev login only accepts users that already exist (seeded)
-    if (input.provider === "dev") return { ok: false, reason: "not_registered" };
-    const isFirstSuperadmin = email === process.env.SUPERADMIN_EMAIL?.trim().toLowerCase();
-    const employee = await prisma.employee.findFirst({ where: { workEmail: email, deletedAt: null, userId: null } });
-    if (!employee && !isFirstSuperadmin) return { ok: false, reason: "not_registered" };
-    if (employee?.status === "left") return { ok: false, reason: "inactive" };
-    const role = await prisma.role.findUniqueOrThrow({ where: { code: isFirstSuperadmin ? SUPERADMIN_ROLE : "user" } });
-    user = await prisma.user.create({
-      data: { email, entraOid: input.entraOid, roleId: role.id, employee: employee ? { connect: { id: employee.id } } : undefined },
-    });
+  const valid = await verifyPassword(password, user?.passwordHash);
+  if (!user || !user.isActive || !valid) {
+    if (user && user.isActive) {
+      const failed = user.failedLoginCount + 1;
+      const lock = failed >= MAX_FAILED_ATTEMPTS;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginCount: lock ? 0 : failed, lockedUntil: lock ? new Date(now.getTime() + LOCK_MINUTES * 60_000) : null },
+      });
+      if (lock) return { ok: false, reason: "locked" };
+    }
+    return { ok: false, reason: "invalid" };
   }
 
-  if (!user.isActive) return { ok: false, reason: "inactive" };
+  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: now, failedLoginCount: 0, lockedUntil: null } });
+  return { ok: true, userId: user.id, sessionVersion: user.sessionVersion };
+}
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { lastLoginAt: new Date(), ...(input.entraOid && !user.entraOid ? { entraOid: input.entraOid } : {}) },
-  });
-  return { ok: true, userId: user.id };
+/** Dev login (local only): an existing active user, no password. */
+export async function devSignIn(rawEmail: string): Promise<SignInResult> {
+  const email = rawEmail.trim().toLowerCase();
+  const user = await prisma.user.findFirst({ where: { email, deletedAt: null, isActive: true } });
+  if (!user) return { ok: false, reason: "invalid" };
+  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+  return { ok: true, userId: user.id, sessionVersion: user.sessionVersion };
 }

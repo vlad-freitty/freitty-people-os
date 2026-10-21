@@ -10,6 +10,7 @@ import { unreadCount } from "@/server/services/notifications";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const actor = await getActorOrNull();
   if (!actor) redirect("/login");
+  if (actor.mustChangePassword) redirect("/change-password"); // one-time password (phase 7)
   const me = await getMe(actor);
   const unread = await unreadCount(actor);
   const t = await getTranslations();
@@ -41,6 +42,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     {
       label: t("shell.sectionAdmin"),
       links: [
+        ...(hasPermission(actor, "users.manage") ? [link("/access", "access")] : []),
         ...(hasPermission(actor, "roles.manage") || hasPermission(actor, "roles.assign") ? [link("/roles", "roles")] : []),
         ...(hasPermission(actor, "import.run") ? [link("/import", "import")] : []),
         ...(hasPermission(actor, "audit.view") ? [link("/audit", "audit")] : []),
@@ -66,6 +68,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         newRequest: t("shell.newRequest"),
         bell: t("notifications.bell", { n: unread }),
         signOut: t("common.signOut"),
+        changePassword: t("password.title"),
       }}
       signOutAction={async () => {
         "use server";
