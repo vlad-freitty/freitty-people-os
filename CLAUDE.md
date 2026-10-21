@@ -152,6 +152,7 @@ npm run lint && npm run typecheck
 | 60 | Companies, departments and locations are edited and removed in `/org` (org.manage). Removal is a soft delete, refused while people who have not left (or sub-departments / departments) are inside; the name gets a "removed" suffix so it can be reused; heads and absence-policy assignments go with it, history stays. | Vlad, 2026-10-22. |
 | 61 | Performance: balances are synced at most once a day per person (`Employee.balancesSyncedOn`; reset when types, policies, assignments or the card change); `syncTypeBalance` reads a policy's periods with their entries once; effective policies of all types in one go. Balance view: 185 → 37 queries (first view of the day) → 13. | Slow pages on Vercel. |
 | 62 | Vercel functions run in `fra1` (`vercel.json`) next to the Neon database in Frankfurt — a US region adds ~90 ms to every query. | Vercel + Neon setup, 2026-10-22. |
+| 63 | Vercel production deploys migrate the database themselves: `vercel-build` → `prisma migrate deploy` + `db:upgrade` (direct Neon URL when available) → `next build`. Preview deploys skip migrations (they share the database). | Vlad: "це кожен раз отак треба буде робити???" |
 
 ## Open questions (from PRD 9 + new)
 

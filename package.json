@@ -17,7 +17,8 @@
     "worker": "tsx scripts/worker.ts",
     "db:upgrade": "tsx scripts/upgrade-reference-data.ts",
     "admin:create": "tsx scripts/admin-create.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "vercel-build": "node scripts/vercel-build.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",

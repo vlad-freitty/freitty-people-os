@@ -35,7 +35,8 @@ npm test        # needs `npm run db` running; uses the people_os_test database
 - New production database: `npx prisma migrate deploy` → `npm run db:upgrade` (roles, absence types, policies, starter
   templates — no fake data; never run `db:seed` there) → `npm run admin:create`. Run them from any machine with
   `DATABASE_URL` pointing to that database (Vercel has no shell).
-- After every release: `npx prisma migrate deploy`, then `npm run db:upgrade`.
+- After every release: `npx prisma migrate deploy`, then `npm run db:upgrade`. **On Vercel this is automatic**: the
+  `vercel-build` script (`scripts/vercel-build.mjs`) runs both on every production deploy, then `next build`.
 - Vercel runs only the web app: the worker (daily balances, Telegram delivery) needs a separate always-on host;
   balances are also synced on every page view and booking, so they stay correct without it.
 - `docker build -t people-os .` — the container runs `prisma migrate deploy` on start.
