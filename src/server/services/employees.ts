@@ -133,6 +133,8 @@ export function toData(input: Partial<EmployeeInput>) {
     showBirthday: input.showBirthday,
     status: input.status,
     locale: input.locale,
+    // hire date, department, type or status may change the balances: the next balance view re-syncs
+    balancesSyncedOn: null,
   };
 }
 

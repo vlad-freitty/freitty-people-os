@@ -155,3 +155,62 @@ export async function setDepartmentHeads(actor: Actor, departmentId: string, emp
     });
   });
 }
+
+/** People who still work there: everyone not deleted and not "left" (left people keep their history). */
+const STAYING = { deletedAt: null, status: { not: "left" as const } };
+
+/** The name of a removed record gets a suffix, so the name is free for a new company / department (unique keys). */
+const removedName = (name: string, id: string) => `${name} · removed ${id.slice(0, 8)}`;
+
+/**
+ * Removes a department (soft delete). Refused while it has sub-departments or people who have not left — move them
+ * first. Its heads and absence policy assignments go with it; requests and history keep pointing to it.
+ */
+export async function deleteDepartment(actor: Actor, id: string) {
+  assertGlobal(actor, "org.manage");
+  const dept = await prisma.department.findFirst({ where: { id, deletedAt: null } });
+  if (!dept) throw new NotFoundError("department");
+  const [children, people] = await Promise.all([
+    prisma.department.count({ where: { parentId: id, deletedAt: null } }),
+    prisma.employee.count({ where: { departmentId: id, ...STAYING } }),
+  ]);
+  if (children > 0) throw new ValidationError({ department: "has_subdepartments" });
+  if (people > 0) throw new ValidationError({ department: `has_people_${people}` });
+  await prisma.$transaction(async (tx) => {
+    await tx.departmentHead.deleteMany({ where: { departmentId: id } });
+    await tx.absencePolicyAssignment.deleteMany({ where: { departmentId: id } });
+    await tx.department.update({ where: { id }, data: { deletedAt: new Date(), name: removedName(dept.name, id) } });
+    await audit(tx, actor, { action: "department.delete", entity: "Department", entityId: id, before: dept, departmentId: id });
+  });
+}
+
+/** Removes a company (soft delete). Refused while it has departments or people who have not left. */
+export async function deleteCompany(actor: Actor, id: string) {
+  assertGlobal(actor, "org.manage");
+  const company = await prisma.company.findFirst({ where: { id, deletedAt: null } });
+  if (!company) throw new NotFoundError("company");
+  const [departments, people] = await Promise.all([
+    prisma.department.count({ where: { companyId: id, deletedAt: null } }),
+    prisma.employee.count({ where: { companyId: id, ...STAYING } }),
+  ]);
+  if (departments > 0) throw new ValidationError({ company: `has_departments_${departments}` });
+  if (people > 0) throw new ValidationError({ company: `has_people_${people}` });
+  await prisma.$transaction(async (tx) => {
+    await tx.absencePolicyAssignment.deleteMany({ where: { companyId: id } });
+    await tx.company.update({ where: { id }, data: { deletedAt: new Date(), name: removedName(company.name, id) } });
+    await audit(tx, actor, { action: "company.delete", entity: "Company", entityId: id, before: company });
+  });
+}
+
+/** Removes a location (soft delete). Refused while people who have not left work there. */
+export async function deleteLocation(actor: Actor, id: string) {
+  assertGlobal(actor, "org.manage");
+  const location = await prisma.location.findFirst({ where: { id, deletedAt: null } });
+  if (!location) throw new NotFoundError("location");
+  const people = await prisma.employee.count({ where: { locationId: id, ...STAYING } });
+  if (people > 0) throw new ValidationError({ location: `has_people_${people}` });
+  await prisma.$transaction(async (tx) => {
+    await tx.location.update({ where: { id }, data: { deletedAt: new Date() } });
+    await audit(tx, actor, { action: "location.delete", entity: "Location", entityId: id, before: location });
+  });
+}

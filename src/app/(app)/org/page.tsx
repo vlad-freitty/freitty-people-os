@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { DepartmentForm, HeadsEditor, NewCompanyForm, NewLocationForm } from "@/components/org-admin";
+import { CompanyActions, DepartmentForm, HeadsEditor, LocationRow, NewCompanyForm, NewLocationForm } from "@/components/org-admin";
 import { Card, PageTitle } from "@/components/ui";
 import { getActor } from "@/server/auth/session";
 import { scopeOf } from "@/server/authz/policy";
@@ -34,6 +34,7 @@ export default async function OrgPage() {
           </span>
           <span className="text-xs text-ink-soft">
             {t("org.heads")}: {d.heads.length ? d.heads.map((h) => h.name).join(", ") : t("common.none")} · {t("org.employeeCount")}: {d.employeeCount}
+            {canManage && <span className="ml-2 font-medium text-red group-open:hidden">{t("common.edit")}</span>}
           </span>
         </summary>
         {canManage && (
@@ -52,7 +53,7 @@ export default async function OrgPage() {
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
           {org.companies.map((c) => (
-            <Card key={c.id} title={`${c.name} · ${c.country}`}>
+            <Card key={c.id} title={`${c.name} · ${c.country}`} actions={canManage && <CompanyActions company={c} />}>
               {tree(c.id, null, 0)}
             </Card>
           ))}
@@ -66,12 +67,7 @@ export default async function OrgPage() {
           <Card title={t("org.locations")}>
             <ul className="mb-4 space-y-2 text-sm">
               {org.locations.map((l) => (
-                <li key={l.id} className="flex justify-between gap-2 border-b border-line/70 pb-2">
-                  <span className="font-medium">{l.name}</span>
-                  <span className="text-ink-soft">
-                    {[l.state, l.country].filter(Boolean).join(", ")} · {l.timezone}
-                  </span>
-                </li>
+                <LocationRow key={l.id} location={l} canManage={canManage} />
               ))}
             </ul>
             {canManage && <NewLocationForm />}

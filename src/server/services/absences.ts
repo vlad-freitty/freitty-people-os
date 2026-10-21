@@ -5,7 +5,7 @@ import type { Actor } from "@/server/authz/actor";
 import { assertGlobal, can } from "@/server/authz/policy";
 import { prisma } from "@/server/db";
 import { ConflictError, NotFoundError, ValidationError } from "@/server/errors";
-import { balanceTypes, currentBalance, effectivePolicy, reverseUsage, round1, syncBalance, syncTypeBalance } from "@/server/absences/balance";
+import { balanceTypes, currentBalance, effectivePolicies, reverseUsage, round1, syncBalance, syncTypeBalance } from "@/server/absences/balance";
 
 // Dictionary of absence types and accrual policies (PRD 5) — configured with settings.manage.
 
@@ -43,6 +43,9 @@ const policyInput = z
 
 const dec = (v: unknown) => (v == null ? null : Number(v));
 
+/** Types, policies or assignments changed: every balance view re-syncs once (see getBalances). */
+const resetBalanceSync = (tx: Pick<typeof prisma, "employee">) => tx.employee.updateMany({ where: { balancesSyncedOn: { not: null } }, data: { balancesSyncedOn: null } });
+
 export async function listAbsenceTypes(_actor: Actor) {
   void _actor;
   const rows = await prisma.absenceType.findMany({ where: { deletedAt: null }, orderBy: { nameUk: "asc" } });
@@ -58,6 +61,7 @@ export async function upsertAbsenceType(actor: Actor, raw: unknown, id?: string)
     if (await tx.absenceType.findFirst({ where: { code: input.code, id: id ? { not: id } : undefined } })) throw new ConflictError("code exists");
     const data = { ...input, nameEn: input.nameEn ?? null, minDays: input.minDays ?? null, maxDays: input.maxDays ?? null };
     const row = id ? await tx.absenceType.update({ where: { id }, data }) : await tx.absenceType.create({ data: { ...data, createdById: actor.userId } });
+    await resetBalanceSync(tx);
     await audit(tx, actor, { action: id ? "absence_type.update" : "absence_type.create", entity: "AbsenceType", entityId: row.id, before, after: row });
     return { id: row.id };
   });
@@ -125,6 +129,7 @@ export async function upsertPolicy(actor: Actor, raw: unknown, id?: string) {
     // one default per type
     if (input.isDefault) await tx.absencePolicy.updateMany({ where: { absenceTypeId: input.absenceTypeId, isDefault: true, id: id ? { not: id } : undefined }, data: { isDefault: false } });
     const row = id ? await tx.absencePolicy.update({ where: { id }, data }) : await tx.absencePolicy.create({ data: { ...data, createdById: actor.userId } });
+    await resetBalanceSync(tx);
     await audit(tx, actor, { action: id ? "absence_policy.update" : "absence_policy.create", entity: "AbsencePolicy", entityId: row.id, before, after: row });
     return { id: row.id };
   });
@@ -156,6 +161,7 @@ export async function assignPolicy(actor: Actor, raw: unknown) {
     const before = await tx.absencePolicyAssignment.findFirst({ where: key });
     if (before) await tx.absencePolicyAssignment.delete({ where: { id: before.id } });
     if (input.policyId) await tx.absencePolicyAssignment.create({ data: { ...key, policyId: input.policyId, createdById: actor.userId } });
+    await resetBalanceSync(tx);
     await audit(tx, actor, {
       action: "absence_policy.assign",
       entity: input.targetType === "company" ? "Company" : input.targetType === "department" ? "Department" : "Employee",
@@ -182,23 +188,29 @@ async function personInScope(actor: Actor, employeeId: string) {
  */
 export async function getBalances(actor: Actor, employeeId: string) {
   const e = await personInScope(actor, employeeId);
-  await prisma.$transaction((tx) => syncBalance(tx, employeeId), { timeout: 30_000 });
-  const today = new Date();
-  const types = await balanceTypes(prisma);
-  const balances = await Promise.all(
-    types.map(async (type) => {
-      const policy = await effectivePolicy(prisma, employeeId, type.id);
-      const current = policy
-        ? await prisma.absenceBalance.findFirst({ where: { employeeId, policyId: policy.id, periodStart: { lte: today } }, orderBy: { periodStart: "desc" } })
-        : null;
-      return {
-        type: { id: type.id, code: type.code, nameUk: type.nameUk, nameEn: type.nameEn, color: type.color, countsAsWorking: type.countsAsWorking },
-        policy: policy ? { id: policy.id, name: policy.name, countDays: policy.countDays, periodStart: policy.periodStart, daysPerPeriod: Number(policy.daysPerPeriod) } : null,
-        balance: await currentBalance(prisma, employeeId, type.id),
-        period: current ? { start: toIsoDate(current.periodStart)!, end: toIsoDate(current.periodEnd)! } : null,
-      };
+  const now = new Date();
+  // accruals and expiries are booked at most once a day per person; anything that changes policies resets the mark
+  if (toIsoDate(e.balancesSyncedOn) !== toIsoDate(now)) await prisma.$transaction((tx) => syncBalance(tx, employeeId, now), { timeout: 30_000 });
+  const [types, policies, rows] = await Promise.all([
+    balanceTypes(prisma),
+    effectivePolicies(prisma, employeeId),
+    prisma.absenceBalance.findMany({
+      where: { employeeId },
+      select: { absenceTypeId: true, policyId: true, periodStart: true, periodEnd: true, entries: { select: { amount: true } } },
+      orderBy: { periodStart: "desc" },
     }),
-  );
+  ]);
+  const balances = types.map((type) => {
+    const policy = policies.get(type.id) ?? null;
+    const current = policy ? rows.find((r) => r.policyId === policy.id && r.periodStart <= now) : null;
+    const balance = round1(rows.filter((r) => r.absenceTypeId === type.id).reduce((s, r) => s + r.entries.reduce((x, y) => x + Number(y.amount), 0), 0));
+    return {
+      type: { id: type.id, code: type.code, nameUk: type.nameUk, nameEn: type.nameEn, color: type.color, countsAsWorking: type.countsAsWorking },
+      policy: policy ? { id: policy.id, name: policy.name, countDays: policy.countDays, periodStart: policy.periodStart, daysPerPeriod: Number(policy.daysPerPeriod) } : null,
+      balance,
+      period: current ? { start: toIsoDate(current.periodStart)!, end: toIsoDate(current.periodEnd)! } : null,
+    };
+  });
   const [entries, absences] = await Promise.all([
     prisma.absenceLedgerEntry.findMany({
       where: { balance: { employeeId } },

@@ -317,6 +317,7 @@ async function importEmployees(tx: Tx, actor: Actor, rows: Raw[]): Promise<Previ
       showBirthday: r.show_birthday,
       status: r.status,
       locale: r.locale,
+      balancesSyncedOn: null,
     } satisfies Partial<Prisma.EmployeeUncheckedCreateInput>;
 
     const existing = await tx.employee.findUnique({ where: { workEmail: r.work_email } });

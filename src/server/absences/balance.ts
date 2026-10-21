@@ -94,25 +94,35 @@ export function expiryDate(policy: Pick<Policy, "expiry" | "expiryMonths">, peri
   return addMonths(dayAfter, policy.expiryMonths ?? 0);
 }
 
-/** Effective policy of one type: person → department (up the tree) → company → the type's default (decision 4, phase 6). */
-export async function effectivePolicy(tx: Tx, employeeId: string, absenceTypeId: string): Promise<AbsencePolicy | null> {
+/**
+ * Effective policy of every type for one person: person → department (up the tree) → company → the type's default
+ * (decision 4, phase 6). A handful of queries for all types together. Contractors have no PTO: an empty map.
+ */
+export async function effectivePolicies(tx: Tx, employeeId: string): Promise<Map<string, AbsencePolicy>> {
   const e = await tx.employee.findUniqueOrThrow({ where: { id: employeeId }, select: { departmentId: true, companyId: true, employmentType: true } });
-  if (e.employmentType === "contractor") return null;
-  const live = { absenceTypeId, policy: { deletedAt: null } };
-  const own = await tx.absencePolicyAssignment.findFirst({ where: { ...live, employeeId }, include: { policy: true } });
-  if (own) return own.policy;
-  let current: string | null = e.departmentId;
-  const seen = new Set<string>();
-  while (current && !seen.has(current)) {
-    seen.add(current);
-    const a = await tx.absencePolicyAssignment.findFirst({ where: { ...live, departmentId: current }, include: { policy: true } });
-    if (a) return a.policy;
-    const d: { parentId: string | null } | null = await tx.department.findUnique({ where: { id: current }, select: { parentId: true } });
-    current = d?.parentId ?? null;
-  }
-  const c = await tx.absencePolicyAssignment.findFirst({ where: { ...live, companyId: e.companyId }, include: { policy: true } });
-  if (c) return c.policy;
-  return tx.absencePolicy.findFirst({ where: { absenceTypeId, isDefault: true, deletedAt: null }, orderBy: { createdAt: "asc" } });
+  const result = new Map<string, AbsencePolicy>();
+  if (e.employmentType === "contractor") return result;
+  const departments = await tx.department.findMany({ select: { id: true, parentId: true } });
+  const parentOf = new Map(departments.map((d) => [d.id, d.parentId]));
+  const chain: string[] = [];
+  for (let d: string | null = e.departmentId; d && !chain.includes(d); d = parentOf.get(d) ?? null) chain.push(d);
+  const [assignments, defaults] = await Promise.all([
+    tx.absencePolicyAssignment.findMany({
+      where: { policy: { deletedAt: null }, OR: [{ employeeId }, { departmentId: { in: chain } }, { companyId: e.companyId }] },
+      include: { policy: true },
+    }),
+    tx.absencePolicy.findMany({ where: { isDefault: true, deletedAt: null }, orderBy: { createdAt: "asc" } }),
+  ]);
+  // lower rank wins: the person, then the department and its parents nearest first, then the company
+  const rank = (a: (typeof assignments)[number]) => (a.employeeId ? 0 : a.departmentId ? 1 + chain.indexOf(a.departmentId) : 1 + chain.length);
+  for (const a of [...assignments].sort((x, y) => rank(y) - rank(x))) result.set(a.absenceTypeId, a.policy);
+  for (const p of defaults) if (!result.has(p.absenceTypeId)) result.set(p.absenceTypeId, p);
+  return result;
+}
+
+/** Effective policy of one type (see effectivePolicies). */
+export async function effectivePolicy(tx: Tx, employeeId: string, absenceTypeId: string): Promise<AbsencePolicy | null> {
+  return (await effectivePolicies(tx, employeeId)).get(absenceTypeId) ?? null;
 }
 
 /** Types that keep a balance (deductsBalance), in display order. */
@@ -133,18 +143,41 @@ async function sumOf(tx: Tx, balanceId: string) {
 
 /** Books accruals, carryovers and expiries of every balance type due up to `now`. Safe to run any number of times. */
 export async function syncBalance(tx: Tx, employeeId: string, now = new Date()) {
+  const [types, policies] = await Promise.all([balanceTypes(tx), effectivePolicies(tx, employeeId)]);
   let booked = 0;
-  for (const type of await balanceTypes(tx)) booked += (await syncTypeBalance(tx, employeeId, type.id, now)).booked;
+  for (const type of types) booked += (await syncTypeBalance(tx, employeeId, type.id, now, policies.get(type.id) ?? null)).booked;
+  await tx.employee.update({ where: { id: employeeId }, data: { balancesSyncedOn: utcToday(now) } });
   return { booked };
 }
 
-/** The same for one absence type. */
-export async function syncTypeBalance(tx: Tx, employeeId: string, absenceTypeId: string, now = new Date()) {
+/**
+ * The same for one absence type. Reads the policy's periods with their entries once and keeps the sums in memory,
+ * so a person with years of history costs a few queries, not hundreds (phase 6 performance fix).
+ * `resolved`: the policy when the caller already knows it (null = none); omitted → looked up.
+ */
+export async function syncTypeBalance(tx: Tx, employeeId: string, absenceTypeId: string, now = new Date(), resolved?: AbsencePolicy | null) {
   const today = utcToday(now);
-  const policy = await effectivePolicy(tx, employeeId, absenceTypeId);
+  const policy = resolved === undefined ? await effectivePolicy(tx, employeeId, absenceTypeId) : resolved;
   const e = await tx.employee.findUniqueOrThrow({ where: { id: employeeId }, select: { hireDate: true, status: true } });
   if (!policy || !e.hireDate || e.status === "candidate") return { policy, booked: 0 };
   let booked = 0;
+
+  const rows = await tx.absenceBalance.findMany({
+    where: { employeeId, policyId: policy.id },
+    include: { entries: { select: { idempotencyKey: true, amount: true } } },
+    orderBy: { periodStart: "asc" },
+  });
+  const keys = new Set(rows.flatMap((b) => b.entries.map((x) => x.idempotencyKey).filter((k): k is string => !!k)));
+  const sums = new Map(rows.map((b) => [b.id, round1(b.entries.reduce((s, x) => s + n(x.amount), 0))]));
+  const byStart = new Map(rows.map((b) => [iso(b.periodStart), b]));
+  const book = async (data: Prisma.AbsenceLedgerEntryUncheckedCreateInput & { idempotencyKey: string; amount: number }) => {
+    if (keys.has(data.idempotencyKey)) return false;
+    await tx.absenceLedgerEntry.create({ data });
+    keys.add(data.idempotencyKey);
+    sums.set(data.balanceId, round1((sums.get(data.balanceId) ?? 0) + data.amount));
+    booked++;
+    return true;
+  };
 
   // monthly periods that already expired without carryover add nothing — they are not created (years of Remote Days)
   const skipExpired = policy.periodStart === "month" && policy.expiry !== "never" && n(policy.carryoverMax) === 0;
@@ -153,37 +186,39 @@ export async function syncTypeBalance(tx: Tx, employeeId: string, absenceTypeId:
     return !skipExpired || !exp || exp > today;
   });
   for (const p of periods) {
-    const b = await tx.absenceBalance.upsert({
-      where: { employeeId_policyId_periodStart: { employeeId, policyId: policy.id, periodStart: p.start } },
-      update: {},
-      create: { employeeId, policyId: policy.id, absenceTypeId, periodStart: p.start, periodEnd: p.end },
-    });
+    let b = byStart.get(iso(p.start));
+    if (!b) {
+      const created = await tx.absenceBalance.create({ data: { employeeId, policyId: policy.id, absenceTypeId, periodStart: p.start, periodEnd: p.end } });
+      b = { ...created, entries: [] };
+      byStart.set(iso(p.start), b);
+      sums.set(b.id, 0);
+    }
     for (const [date, amount] of accrualsFor(policy, p, today)) {
       if (amount === 0) continue;
-      if (await entry(tx, { balanceId: b.id, type: "accrual", amount, date, idempotencyKey: `accrual:${b.id}:${iso(date)}` })) booked++;
+      await book({ balanceId: b.id, type: "accrual", amount, date, idempotencyKey: `accrual:${b.id}:${iso(date)}` });
     }
   }
   // every period of this policy, including skipped old ones created while they were current
-  const balances = await tx.absenceBalance.findMany({ where: { employeeId, policyId: policy.id, periodStart: { lte: today } }, orderBy: { periodStart: "asc" } });
+  const balances = [...byStart.values()].filter((b) => b.periodStart <= today).sort((x, y) => x.periodStart.getTime() - y.periodStart.getTime());
 
   for (const [i, b] of balances.entries()) {
     const period = { start: b.periodStart, end: b.periodEnd };
     const next = balances[i + 1];
     // carryover at the start of the next period: up to carryover_max (everything when nothing ever expires)
     if (next && !b.closedAt) {
-      const rest = await sumOf(tx, b.id);
+      const rest = sums.get(b.id) ?? 0;
       const carry = policy.expiry === "never" ? Math.max(rest, 0) : Math.min(Math.max(rest, 0), n(policy.carryoverMax));
       if (carry > 0) {
-        await entry(tx, { balanceId: b.id, type: "carryover", amount: -carry, date: b.periodEnd, comment: "→", idempotencyKey: `carryover-out:${b.id}` });
-        await entry(tx, { balanceId: next.id, type: "carryover", amount: carry, date: next.periodStart, comment: "←", idempotencyKey: `carryover-in:${b.id}` });
-        booked += 2;
+        await book({ balanceId: b.id, type: "carryover", amount: -carry, date: b.periodEnd, comment: "→", idempotencyKey: `carryover-out:${b.id}` });
+        await book({ balanceId: next.id, type: "carryover", amount: carry, date: next.periodStart, comment: "←", idempotencyKey: `carryover-in:${b.id}` });
       }
       await tx.absenceBalance.update({ where: { id: b.id }, data: { closedAt: now } });
+      b.closedAt = now;
     }
     const expires = expiryDate(policy, period);
     if (expires && expires <= today) {
-      const rest = await sumOf(tx, b.id);
-      if (rest > 0 && (await entry(tx, { balanceId: b.id, type: "expiry", amount: -rest, date: expires, idempotencyKey: `expiry:${b.id}` }))) booked++;
+      const rest = sums.get(b.id) ?? 0;
+      if (rest > 0) await book({ balanceId: b.id, type: "expiry", amount: -rest, date: expires, idempotencyKey: `expiry:${b.id}` });
     }
   }
   return { policy, booked };

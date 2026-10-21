@@ -149,6 +149,9 @@ npm run lint && npm run typecheck
 | 57 | One-time password → `mustChangePassword`: every page redirects to `/change-password`, every API call answers 403 `password_change_required`. A password change, reset or deactivation bumps `User.sessionVersion` (stored in the JWT as `sv`) and ends every other session. | Vlad: "система після першого логування має вимагати зміни паролю". |
 | 58 | First superadmin: `npm run admin:create -- --email … --name "…"` on the server (no web sign-up); refuses when a superadmin exists unless `--force`; `--reset` gives a superadmin a new one-time password. `SUPERADMIN_EMAIL` is gone. | Vlad: "як завести першого головного адміна?" |
 | 59 | Operator, manager etc. are positions (free text), not roles: they get the role "Користувач" (the default in the form). | Vlad, 2026-10-21: same rights as a user. |
+| 60 | Companies, departments and locations are edited and removed in `/org` (org.manage). Removal is a soft delete, refused while people who have not left (or sub-departments / departments) are inside; the name gets a "removed" suffix so it can be reused; heads and absence-policy assignments go with it, history stays. | Vlad, 2026-10-22. |
+| 61 | Performance: balances are synced at most once a day per person (`Employee.balancesSyncedOn`; reset when types, policies, assignments or the card change); `syncTypeBalance` reads a policy's periods with their entries once; effective policies of all types in one go. Balance view: 185 → 37 queries (first view of the day) → 13. | Slow pages on Vercel. |
+| 62 | Vercel functions run in `fra1` (`vercel.json`) next to the Neon database in Frankfurt — a US region adds ~90 ms to every query. | Vercel + Neon setup, 2026-10-22. |
 
 ## Open questions (from PRD 9 + new)
 

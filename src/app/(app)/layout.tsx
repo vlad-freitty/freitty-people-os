@@ -11,9 +11,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const actor = await getActorOrNull();
   if (!actor) redirect("/login");
   if (actor.mustChangePassword) redirect("/change-password"); // one-time password (phase 7)
-  const me = await getMe(actor);
-  const unread = await unreadCount(actor);
-  const t = await getTranslations();
+  const [me, unread, t] = await Promise.all([getMe(actor), unreadCount(actor), getTranslations()]);
 
   const canSearch = hasPermission(actor, "directory.view") || hasPermission(actor, "employees.view");
   const link = (href: string, key: NavLink["icon"]): NavLink => ({ href, label: t(`nav.${key}`), icon: key });

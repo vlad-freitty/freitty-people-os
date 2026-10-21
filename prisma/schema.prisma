@@ -147,6 +147,8 @@ model Employee {
   status            EmployeeStatus            @default(active)
   /// level from the PTO & Benefits Guide (phase 6); visible with the full profile only
   grade             EmployeeGrade?
+  /// technical: the day balances were last synced for every type — a page view syncs at most once a day (performance)
+  balancesSyncedOn  DateTime?                 @db.Date
   /// personal absence policies per type; override department and company (phase 6)
   policyAssignments AbsencePolicyAssignment[]
   balances          AbsenceBalance[]

@@ -152,7 +152,18 @@
     "newDepartment": "New department",
     "newLocation": "New location",
     "noParent": "— no parent —",
-    "selectHeads": "Pick one or more"
+    "selectHeads": "Pick one or more",
+    "deleteCompany": "Delete company",
+    "deleteDepartment": "Delete department",
+    "deleteLocation": "Delete location",
+    "confirmDeleteCompany": "Delete company “{name}”? Its history (requests, audit log) is kept.",
+    "confirmDeleteDepartment": "Delete department “{name}”? Its history (requests, audit log) is kept.",
+    "confirmDeleteLocation": "Delete location “{name}”?",
+    "cannotDelete": {
+      "has_people": "Cannot delete: {n} people still work here. Move them to another department first (or finish their offboarding).",
+      "has_departments": "Cannot delete: the company still has {n} departments. Delete or move them first.",
+      "has_subdepartments": "Cannot delete: the department has sub-departments. Delete them or give them another parent first."
+    }
   },
   "roles": {
     "title": "Roles & permissions",
