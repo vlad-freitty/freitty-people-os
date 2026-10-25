@@ -1,10 +1,13 @@
 "use client";
 
+import { Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { api, ApiRequestError } from "./api";
 import { ErrorBox } from "./error-box";
+import { useModalClose } from "./overlay";
 import { Button, Field } from "./ui";
 
 type Person = { id: string; label: string };
@@ -27,40 +30,61 @@ function useRun() {
   return { error, pending, run };
 }
 
+/** Save / cancel row at the bottom of a dialog form. */
+function DialogActions({ pending, label }: { pending: boolean; label: string }) {
+  const t = useTranslations("common");
+  const close = useModalClose();
+  return (
+    <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
+      {close && (
+        <Button type="button" variant="secondary" onClick={close}>
+          {t("cancel")}
+        </Button>
+      )}
+      <Button disabled={pending}>{label}</Button>
+    </div>
+  );
+}
+
 export function SystemForm({ people, initial }: { people: Person[]; initial?: { id: string; name: string; ownerId: string | null; isActive: boolean } }) {
   const t = useTranslations();
+  const close = useModalClose();
   const { error, pending, run } = useRun();
   const [name, setName] = useState(initial?.name ?? "");
   const [ownerId, setOwnerId] = useState(initial?.ownerId ?? "");
   const [isActive, setActive] = useState(initial?.isActive ?? true);
   return (
     <form
-      className="space-y-2"
+      className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
         const body = { name, ownerEmployeeId: ownerId || null, isActive };
-        run(() => (initial ? api(`/systems/${initial.id}`, { method: "PATCH", body }) : api("/systems", { body })), () => !initial && (setName(""), setOwnerId("")));
+        run(() => (initial ? api(`/systems/${initial.id}`, { method: "PATCH", body }) : api("/systems", { body })), () => close?.());
       }}
     >
       <ErrorBox error={error} />
-      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
-        <input className="field" required value={name} placeholder={t("systems.name")} onChange={(e) => setName(e.target.value)} />
-        <select className="field" value={ownerId} onChange={(e) => setOwnerId(e.target.value)} aria-label={t("systems.owner")}>
-          <option value="">{t("systems.owner")}: {t("common.none")}</option>
+      <Field label={t("systems.name")}>
+        <input className="field" required autoFocus placeholder="Google Workspace" value={name} onChange={(e) => setName(e.target.value)} />
+      </Field>
+      <Field label={t("systems.owner")}>
+        <select className="field" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+          <option value="">{t("common.none")}</option>
           {people.map((p) => (
             <option key={p.id} value={p.id}>
               {p.label}
             </option>
           ))}
         </select>
-        <label className="flex items-center gap-1.5 text-sm">
-          <input type="checkbox" checked={isActive} onChange={(e) => setActive(e.target.checked)} />
-          {t("systems.active")}
-        </label>
-        <Button disabled={pending} variant={initial ? "secondary" : "primary"}>
-          {initial ? t("common.save") : t("systems.newSystem")}
-        </Button>
-      </div>
+        <span className="mt-1 block text-xs text-ink-mute">{t("systems.ownerHint")}</span>
+      </Field>
+      <label className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3 text-sm">
+        <input type="checkbox" className="size-4 accent-red" checked={isActive} onChange={(e) => setActive(e.target.checked)} />
+        <span>
+          <span className="block font-bold text-ink-2">{t("systems.active")}</span>
+          <span className="block text-xs text-ink-mute">{t("systems.activeHint")}</span>
+        </span>
+      </label>
+      <DialogActions pending={pending} label={initial ? t("common.save") : t("systems.newSystem")} />
     </form>
   );
 }
@@ -73,53 +97,61 @@ export function BundleForm({
   initial?: { id: string; name: string; positionOrRole: string; items: { systemId: string; accessLevel: string }[] };
 }) {
   const t = useTranslations();
+  const close = useModalClose();
   const { error, pending, run } = useRun();
   const [name, setName] = useState(initial?.name ?? "");
   const [position, setPosition] = useState(initial?.positionOrRole ?? "");
-  const [items, setItems] = useState(initial?.items ?? [{ systemId: "", accessLevel: "" }]);
+  const [items, setItems] = useState(initial?.items.map(({ systemId, accessLevel }) => ({ systemId, accessLevel })) ?? [{ systemId: "", accessLevel: "" }]);
   const setItem = (i: number, patch: Partial<(typeof items)[number]>) => setItems((list) => list.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   return (
     <form
-      className="space-y-2"
+      className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
         const body = { name, positionOrRole: position, items: items.filter((i) => i.systemId) };
-        run(() => (initial ? api(`/bundles/${initial.id}`, { method: "PATCH", body }) : api("/bundles", { body })), () => !initial && (setName(""), setPosition(""), setItems([{ systemId: "", accessLevel: "" }])));
+        run(() => (initial ? api(`/bundles/${initial.id}`, { method: "PATCH", body }) : api("/bundles", { body })), () => close?.());
       }}
     >
       <ErrorBox error={error} />
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Field label={t("systems.name")}>
-          <input className="field" required value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="field" required autoFocus value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label={t("systems.position")}>
-          <input className="field" required value={position} onChange={(e) => setPosition(e.target.value)} />
+          <input className="field" required placeholder={t("systems.positionPlaceholder")} value={position} onChange={(e) => setPosition(e.target.value)} />
         </Field>
       </div>
-      {items.map((item, i) => (
-        <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-          <select className="field" value={item.systemId} onChange={(e) => setItem(i, { systemId: e.target.value })} aria-label={t("step.system")}>
-            <option value="" />
-            {systems.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <input className="field" value={item.accessLevel} placeholder={t("systems.level")} onChange={(e) => setItem(i, { accessLevel: e.target.value })} />
-          <Button type="button" variant="ghost" onClick={() => setItems((list) => list.filter((_, j) => j !== i))}>
-            ✕
+      <div>
+        <span className="label">{t("systems.bundleSystems")}</span>
+        <div className="space-y-2 rounded-2xl bg-cream p-3">
+          {items.map((item, i) => (
+            <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+              <select className="field" value={item.systemId} onChange={(e) => setItem(i, { systemId: e.target.value })} aria-label={t("step.system")}>
+                <option value="">{t("systems.chooseSystem")}</option>
+                {systems.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <input className="field" value={item.accessLevel} placeholder={t("systems.level")} onChange={(e) => setItem(i, { accessLevel: e.target.value })} />
+              <button
+                type="button"
+                aria-label={t("common.delete")}
+                className="flex size-10 items-center justify-center rounded-full text-ink-mute hover:bg-paper hover:text-red"
+                onClick={() => setItems((list) => list.filter((_, j) => j !== i))}
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={16} />
+              </button>
+            </div>
+          ))}
+          <Button type="button" variant="ghost" onClick={() => setItems((list) => [...list, { systemId: "", accessLevel: "" }])}>
+            <HugeiconsIcon icon={Add01Icon} size={16} />
+            {t("systems.addItem")}
           </Button>
         </div>
-      ))}
-      <div className="flex gap-2">
-        <Button type="button" variant="ghost" onClick={() => setItems((list) => [...list, { systemId: "", accessLevel: "" }])}>
-          + {t("systems.addItem")}
-        </Button>
-        <Button disabled={pending} variant={initial ? "secondary" : "primary"}>
-          {initial ? t("common.save") : t("systems.newBundle")}
-        </Button>
       </div>
+      <DialogActions pending={pending} label={initial ? t("common.save") : t("systems.newBundle")} />
     </form>
   );
 }

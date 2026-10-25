@@ -24,13 +24,33 @@ export function LinkButton({ variant = "primary", className = "", ...props }: Co
   return <Link className={buttonClass(variant, className)} {...props} />;
 }
 
-export function Card({ title, actions, children, className = "" }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
+export function Card({
+  title,
+  subtitle,
+  icon,
+  actions,
+  children,
+  className = "",
+}: {
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  icon?: IconSvgElement;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <section className={`rounded-card border border-edge bg-paper p-5 shadow-[0_1px_1px_rgba(28,39,76,0.04)] ${className}`}>
       {(title || actions) && (
         <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          {title && <h2 className="text-base font-bold text-ink-2">{title}</h2>}
-          {actions}
+          <div className="flex min-w-0 items-center gap-3">
+            {icon && <IconTile icon={icon} />}
+            <div className="min-w-0">
+              {title && <h2 className="text-base font-bold text-ink-2">{title}</h2>}
+              {subtitle && <p className="text-xs text-ink-mute">{subtitle}</p>}
+            </div>
+          </div>
+          {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
         </header>
       )}
       {children}
@@ -92,6 +112,78 @@ export function Field({ label, children, className = "" }: { label: ReactNode; c
       <span className="label">{label}</span>
       {children}
     </label>
+  );
+}
+
+const tileTones = {
+  red: "bg-red-tint text-red",
+  blue: "bg-blue-tint text-blue",
+  ok: "bg-ok-tint text-ok-strong",
+  warn: "bg-warn-tint text-warn",
+  neutral: "bg-cream-deep text-ink-soft",
+};
+
+/** 40 px rounded square with an icon — marks what a block or a row is about. */
+export function IconTile({ icon, tone = "red", size = 40 }: { icon: IconSvgElement; tone?: keyof typeof tileTones; size?: number }) {
+  return (
+    <span className={`flex shrink-0 items-center justify-center rounded-xl ${tileTones[tone]}`} style={{ width: size, height: size }}>
+      <HugeiconsIcon icon={icon} size={Math.round(size * 0.5)} />
+    </span>
+  );
+}
+
+/** Initials in a circle (no photos in People OS). */
+export function Avatar({ name, muted = false }: { name: string; muted?: boolean }) {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
+  return (
+    <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${muted ? "bg-cream-deep text-ink-mute" : "bg-navy text-white"}`}>
+      {initials || "?"}
+    </span>
+  );
+}
+
+/** A dashed block with an icon, a sentence and (optionally) the action that fills it. */
+export function EmptyState({ icon, title, hint, action }: { icon: IconSvgElement; title: ReactNode; hint?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center rounded-2xl border border-dashed border-line-strong px-6 py-8 text-center">
+      <IconTile icon={icon} tone="neutral" />
+      <p className="mt-3 text-sm font-bold text-ink-2">{title}</p>
+      {hint && <p className="mt-1 max-w-sm text-sm text-ink-mute">{hint}</p>}
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}
+
+/** Numbered part of a longer form: "1 · Логін". */
+export function FormSection({ n, title, hint, children }: { n?: number | string; title: ReactNode; hint?: ReactNode; children: ReactNode }) {
+  return (
+    <fieldset className="space-y-3">
+      <legend className="flex items-center gap-2 text-sm font-bold text-ink-2">
+        {n !== undefined && <span className="flex size-6 items-center justify-center rounded-full bg-navy text-xs text-white">{n}</span>}
+        {title}
+      </legend>
+      {hint && <p className="-mt-1 text-xs text-ink-mute">{hint}</p>}
+      {children}
+    </fieldset>
+  );
+}
+
+/** Small count tile for a page summary row. */
+export function Stat({ label, value, tone = "neutral" }: { label: ReactNode; value: ReactNode; tone?: "neutral" | "ok" | "warn" | "red" }) {
+  const dot = { neutral: "bg-ink-mute", ok: "bg-ok", warn: "bg-warn", red: "bg-red" }[tone];
+  return (
+    <div className="rounded-2xl border border-edge bg-paper px-4 py-3">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-ink-mute">
+        <span className={`size-1.5 rounded-full ${dot}`} />
+        {label}
+      </p>
+      <p className="mt-1 text-2xl leading-none font-bold text-ink-2">{value}</p>
+    </div>
   );
 }
 
