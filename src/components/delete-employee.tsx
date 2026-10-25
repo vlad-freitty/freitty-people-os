@@ -1,5 +1,7 @@
 "use client";
 
+import { Delete02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -15,7 +17,7 @@ export function DeleteEmployeeButton({ employeeId }: { employeeId: string }) {
   return (
     <>
       <Button
-        variant="ghost"
+        variant="danger"
         disabled={pending}
         onClick={() => {
           if (!confirm(t("employee.deleteConfirm"))) return;
@@ -30,6 +32,7 @@ export function DeleteEmployeeButton({ employeeId }: { employeeId: string }) {
           });
         }}
       >
+        <HugeiconsIcon icon={Delete02Icon} size={17} />
         {t("common.delete")}
       </Button>
       <ErrorBox error={error} />

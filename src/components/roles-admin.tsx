@@ -1,5 +1,16 @@
 "use client";
 
+import {
+  Delete02Icon,
+  FileEditIcon,
+  InformationCircleIcon,
+  Search01Icon,
+  Settings02Icon,
+  ShieldKeyIcon,
+  UserGroupIcon,
+  Wallet01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -7,7 +18,8 @@ import { localized } from "@/lib/format";
 import { api } from "./api";
 import { ErrorBox } from "./error-box";
 import { LocalTime } from "./local-time";
-import { Badge, Button, Field } from "./ui";
+import { useModalClose } from "./overlay";
+import { Avatar, Badge, Button, Empty, Field, IconTile } from "./ui";
 
 type Scope = "all" | "departments" | "self";
 type Role = {
@@ -22,10 +34,16 @@ type Role = {
 };
 type Catalog = { key: string; group: string; scopes: Scope[] }[];
 
+const GROUP_ICONS: Record<string, IconSvgElement> = { people: UserGroupIcon, admin: Settings02Icon, requests: FileEditIcon, money: Wallet01Icon };
+// narrowest first, so the control reads left → right as "less → more"
+const SCOPE_ORDER: Scope[] = ["self", "departments", "all"];
+
+/** One role at a time: pick it from the pills, then set every permission with a segmented scope control. */
 export function RoleMatrix({ roles, catalog, canManage }: { roles: Role[]; catalog: Catalog; canManage: boolean }) {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
+  const [selectedId, setSelectedId] = useState(roles[0]?.id ?? "");
   const [draft, setDraft] = useState<Record<string, Record<string, Scope>>>(() =>
     Object.fromEntries(roles.map((r) => [r.id, { ...r.permissions }])),
   );
@@ -33,25 +51,29 @@ export function RoleMatrix({ roles, catalog, canManage }: { roles: Role[]; catal
   const [error, setError] = useState<unknown>(null);
   const [pending, start] = useTransition();
   const groups = [...new Set(catalog.map((c) => c.group))];
+  const role = roles.find((r) => r.id === selectedId) ?? roles[0];
+  if (!role) return null;
+  const editable = canManage && !role.locked;
+  const granted = Object.keys(draft[role.id] ?? {}).length;
 
-  const setCell = (roleId: string, key: string, value: string) => {
+  const setCell = (roleId: string, key: string, value: Scope | "") => {
     setDraft((d) => {
       const next = { ...d[roleId] };
-      if (value) next[key] = value as Scope;
+      if (value) next[key] = value;
       else delete next[key];
       return { ...d, [roleId]: next };
     });
     setDirty((s) => new Set(s).add(roleId));
   };
 
-  const save = (role: Role) =>
+  const save = (r: Role) =>
     start(async () => {
       setError(null);
       try {
-        await api(`/roles/${role.id}`, { method: "PATCH", body: { permissions: draft[role.id] } });
+        await api(`/roles/${r.id}`, { method: "PATCH", body: { permissions: draft[r.id] } });
         setDirty((s) => {
           const n = new Set(s);
-          n.delete(role.id);
+          n.delete(r.id);
           return n;
         });
         router.refresh();
@@ -60,11 +82,12 @@ export function RoleMatrix({ roles, catalog, canManage }: { roles: Role[]; catal
       }
     });
 
-  const remove = (role: Role) =>
+  const remove = (r: Role) =>
     start(async () => {
       setError(null);
       try {
-        await api(`/roles/${role.id}`, { method: "DELETE" });
+        await api(`/roles/${r.id}`, { method: "DELETE" });
+        setSelectedId(roles.find((x) => x.id !== r.id)?.id ?? "");
         router.refresh();
       } catch (err) {
         setError(err);
@@ -72,97 +95,111 @@ export function RoleMatrix({ roles, catalog, canManage }: { roles: Role[]; catal
     });
 
   return (
-    <div className="space-y-3">
-      <ErrorBox error={error} />
-      <div className="overflow-x-auto rounded-card border border-edge bg-paper">
-        <table className="table min-w-[720px]">
-          <thead>
-            <tr>
-              <th className="sticky left-0 bg-paper">{t("roles.permission")}</th>
-              {roles.map((r) => (
-                <th key={r.id} className="min-w-[140px]">
-                  <span className="block text-ink normal-case">{localized(locale, r.nameUk, r.nameEn)}</span>
-                  <span className="font-mono text-[10px] normal-case">{r.code}</span>
-                  {r.isSystem && <span className="ml-1"><Badge>{t("roles.system")}</Badge></span>}
-                  <span className="block text-[10px] normal-case">
-                    {t("roles.users")}: {r.userCount}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {groups.map((g) => (
-              <Group key={g} title={t(`permissionGroups.${g}` as "permissionGroups.people")} colSpan={roles.length + 1}>
-                {catalog
-                  .filter((c) => c.group === g)
-                  .map((c) => (
-                    <tr key={c.key}>
-                      <td className="sticky left-0 bg-paper">
-                        {t(`permissions.${c.key}` as "permissions.audit.view")}
-                        <span className="block font-mono text-[10px] text-ink-mute">{c.key}</span>
-                      </td>
-                      {roles.map((r) => (
-                        <td key={r.id}>
-                          <select
-                            className="field py-1 text-xs"
-                            disabled={r.locked || !canManage}
-                            value={draft[r.id]?.[c.key] ?? ""}
-                            onChange={(e) => setCell(r.id, c.key, e.target.value)}
-                          >
-                            <option value="">{t("roles.noAccess")}</option>
-                            {c.scopes.map((s) => (
-                              <option key={s} value={s}>
-                                {t(`scopes.${s}`)}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-              </Group>
-            ))}
-            {canManage && (
-              <tr>
-                <td className="sticky left-0 bg-paper" />
-                {roles.map((r) => (
-                  <td key={r.id}>
-                    {r.locked ? (
-                      <span className="text-[11px] text-ink-mute">{t("roles.locked")}</span>
-                    ) : (
-                      <div className="flex flex-col gap-1">
-                        <Button disabled={pending || !dirty.has(r.id)} onClick={() => save(r)} className="py-1 text-xs">
-                          {t("common.save")}
-                        </Button>
-                        {!r.isSystem && r.userCount === 0 && (
-                          <Button variant="ghost" disabled={pending} onClick={() => remove(r)} className="py-1 text-xs">
-                            {t("common.delete")}
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                ))}
-              </tr>
+    <div className="space-y-5">
+      <ul className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label={t("roles.rolesTab")}>
+        {roles.map((r) => {
+          const active = r.id === role.id;
+          return (
+            <li key={r.id}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setSelectedId(r.id)}
+                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium whitespace-nowrap transition ${active ? "border-navy bg-navy text-white" : "border-line-strong bg-paper text-ink-soft hover:bg-cream"}`}
+              >
+                {localized(locale, r.nameUk, r.nameEn)}
+                <span className={`inline-flex items-center gap-1 text-xs ${active ? "text-white/70" : "text-ink-mute"}`}>
+                  <HugeiconsIcon icon={UserGroupIcon} size={13} />
+                  {r.userCount}
+                </span>
+                {dirty.has(r.id) && <span className="size-2 rounded-full bg-warn" aria-label={t("admin2.unsaved")} />}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <IconTile icon={ShieldKeyIcon} tone={role.locked ? "navy" : role.isSystem ? "blue" : "ok"} size={40} />
+          <div className="min-w-0">
+            <p className="flex flex-wrap items-center gap-2 font-bold text-ink-2">
+              {localized(locale, role.nameUk, role.nameEn)}
+              {role.isSystem && <Badge>{t("roles.system")}</Badge>}
+            </p>
+            <p className="text-xs text-ink-mute">
+              <span className="font-mono">{role.code}</span> · {t("roles.users")}: {role.userCount} · {t("admin2.grantedCount", { n: granted, total: catalog.length })}
+            </p>
+          </div>
+        </div>
+        {editable && (
+          <div className="flex flex-wrap gap-2">
+            {!role.isSystem && role.userCount === 0 && (
+              <Button
+                variant="danger"
+                disabled={pending}
+                onClick={() => window.confirm(t("admin2.confirmDeleteRole", { name: localized(locale, role.nameUk, role.nameEn) })) && remove(role)}
+              >
+                <HugeiconsIcon icon={Delete02Icon} size={16} />
+                {t("common.delete")}
+              </Button>
             )}
-          </tbody>
-        </table>
+            <Button disabled={pending || !dirty.has(role.id)} onClick={() => save(role)}>
+              {t("common.save")}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <ErrorBox error={error} />
+      {role.locked && <Empty icon={InformationCircleIcon}>{t("roles.locked")}</Empty>}
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        {groups.map((g) => (
+          <section key={g} className="rounded-2xl border border-line p-4">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-ink-2">
+              <IconTile icon={GROUP_ICONS[g] ?? Settings02Icon} tone="neutral" size={28} />
+              {t(`permissionGroups.${g}` as "permissionGroups.people")}
+            </h3>
+            <ul className="divide-y divide-line">
+              {catalog
+                .filter((c) => c.group === g)
+                .map((c) => {
+                  const value = draft[role.id]?.[c.key] ?? "";
+                  const options: (Scope | "")[] = ["", ...SCOPE_ORDER.filter((s) => c.scopes.includes(s))];
+                  return (
+                    <li key={c.key} className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-ink-2">{t(`permissions.${c.key}` as "permissions.audit.view")}</span>
+                        <span className="block font-mono text-[10px] text-ink-mute">{c.key}</span>
+                      </span>
+                      <span className="inline-flex shrink-0 self-start rounded-full border border-line-strong bg-paper p-0.5 sm:self-auto" role="radiogroup" aria-label={t(`permissions.${c.key}` as "permissions.audit.view")}>
+                        {options.map((s) => {
+                          const on = value === s;
+                          return (
+                            <button
+                              key={s || "none"}
+                              type="button"
+                              role="radio"
+                              aria-checked={on}
+                              disabled={!editable}
+                              onClick={() => setCell(role.id, c.key, s)}
+                              className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition disabled:cursor-not-allowed ${on ? (s ? "bg-navy text-white" : "bg-cream-deep text-ink") : "text-ink-mute enabled:hover:text-ink"}`}
+                            >
+                              {s ? t(`scopes.${s}`) : t("roles.noAccess")}
+                            </button>
+                          );
+                        })}
+                      </span>
+                    </li>
+                  );
+                })}
+            </ul>
+          </section>
+        ))}
       </div>
     </div>
-  );
-}
-
-function Group({ title, colSpan, children }: { title: string; colSpan: number; children: React.ReactNode }) {
-  return (
-    <>
-      <tr>
-        <td colSpan={colSpan} className="bg-cream-deep/60 text-xs font-semibold tracking-wide text-ink-soft uppercase">
-          {title}
-        </td>
-      </tr>
-      {children}
-    </>
   );
 }
 
@@ -170,6 +207,7 @@ export function NewRoleForm({ roles }: { roles: Role[] }) {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
+  const close = useModalClose();
   const [code, setCode] = useState("");
   const [nameUk, setNameUk] = useState("");
   const [nameEn, setNameEn] = useState("");
@@ -178,7 +216,7 @@ export function NewRoleForm({ roles }: { roles: Role[] }) {
   const [pending, start] = useTransition();
   return (
     <form
-      className="space-y-3"
+      className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
@@ -190,6 +228,7 @@ export function NewRoleForm({ roles }: { roles: Role[] }) {
             setNameUk("");
             setNameEn("");
             router.refresh();
+            close?.();
           } catch (err) {
             setError(err);
           }
@@ -197,15 +236,16 @@ export function NewRoleForm({ roles }: { roles: Role[] }) {
       }}
     >
       <ErrorBox error={error} />
-      <div className="grid gap-3 sm:grid-cols-4">
-        <Field label={t("roles.code")}>
-          <input className="field font-mono" required pattern="[a-z][a-z0-9_]{1,40}" value={code} onChange={(e) => setCode(e.target.value)} />
-        </Field>
+      <div className="grid gap-3 sm:grid-cols-2">
         <Field label={t("roles.nameUk")}>
-          <input className="field" required value={nameUk} onChange={(e) => setNameUk(e.target.value)} />
+          <input className="field" required autoFocus value={nameUk} onChange={(e) => setNameUk(e.target.value)} />
         </Field>
         <Field label={t("roles.nameEn")}>
           <input className="field" value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
+        </Field>
+        <Field label={t("roles.code")}>
+          <input className="field font-mono" required pattern="[a-z][a-z0-9_]{1,40}" placeholder="team_lead" value={code} onChange={(e) => setCode(e.target.value)} />
+          <span className="mt-1 block text-xs text-ink-mute">{t("admin2.codeHint")}</span>
         </Field>
         <Field label={t("roles.copyFrom")}>
           <select className="field" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
@@ -217,7 +257,14 @@ export function NewRoleForm({ roles }: { roles: Role[] }) {
           </select>
         </Field>
       </div>
-      <Button disabled={pending}>{t("roles.newRole")}</Button>
+      <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
+        {close && (
+          <Button type="button" variant="secondary" onClick={close}>
+            {t("common.cancel")}
+          </Button>
+        )}
+        <Button disabled={pending}>{t("roles.newRole")}</Button>
+      </div>
     </form>
   );
 }
@@ -235,6 +282,7 @@ export function UsersTable({ users, roles, isSuperadmin }: { users: UserRow[]; r
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
+  const [query, setQuery] = useState("");
   const [error, setError] = useState<unknown>(null);
   const [pending, start] = useTransition();
   const assign = (userId: string, roleId: string) =>
@@ -247,34 +295,41 @@ export function UsersTable({ users, roles, isSuperadmin }: { users: UserRow[]; r
         setError(err);
       }
     });
+  const q = query.trim().toLowerCase();
+  const rows = q ? users.filter((u) => `${u.email} ${u.employee?.name ?? ""}`.toLowerCase().includes(q)) : users;
   return (
     <div className="space-y-3">
+      <label className="relative block sm:max-w-72">
+        <HugeiconsIcon icon={Search01Icon} size={16} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-mute" />
+        <input className="field pl-9!" value={query} placeholder={t("admin2.searchUsers")} aria-label={t("admin2.searchUsers")} onChange={(e) => setQuery(e.target.value)} />
+      </label>
       <ErrorBox error={error} />
-      <div className="overflow-x-auto rounded-card border border-edge bg-paper">
+      <div className="overflow-x-auto">
         <table className="table">
           <thead>
             <tr>
-              <th>{t("roles.email")}</th>
               <th>{t("employee.name")}</th>
               <th>{t("roles.lastLogin")}</th>
               <th>{t("roles.assign")}</th>
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => {
+            {rows.map((u) => {
               const lockedRow = !isSuperadmin && u.role.code === "superadmin";
               return (
-                <tr key={u.id}>
-                  <td className="font-mono text-xs">{u.email}</td>
-                  <td>{u.employee?.name ?? t("common.none")}</td>
-                  <td>{u.lastLoginAt ? <LocalTime iso={u.lastLoginAt} /> : t("common.none")}</td>
+                <tr key={u.id} className={u.isActive ? "" : "opacity-60"}>
                   <td>
-                    <select
-                      className="field py-1 text-sm"
-                      disabled={pending || lockedRow}
-                      value={u.role.id}
-                      onChange={(e) => assign(u.id, e.target.value)}
-                    >
+                    <span className="flex items-center gap-3">
+                      <Avatar name={u.employee?.name ?? u.email} muted={!u.isActive} />
+                      <span className="min-w-0">
+                        <span className="block font-bold text-ink-2">{u.employee?.name ?? t("common.none")}</span>
+                        <span className="block text-xs text-ink-mute">{u.email}</span>
+                      </span>
+                    </span>
+                  </td>
+                  <td className="text-xs whitespace-nowrap text-ink-soft">{u.lastLoginAt ? <LocalTime iso={u.lastLoginAt} /> : t("common.none")}</td>
+                  <td className="min-w-48">
+                    <select className="field" disabled={pending || lockedRow} value={u.role.id} onChange={(e) => assign(u.id, e.target.value)} aria-label={t("roles.assign")}>
                       {roles
                         .filter((r) => isSuperadmin || r.code !== "superadmin" || r.id === u.role.id)
                         .map((r) => (
@@ -290,6 +345,7 @@ export function UsersTable({ users, roles, isSuperadmin }: { users: UserRow[]; r
           </tbody>
         </table>
       </div>
+      {rows.length === 0 && <Empty icon={Search01Icon}>{t("common.noResults")}</Empty>}
     </div>
   );
 }

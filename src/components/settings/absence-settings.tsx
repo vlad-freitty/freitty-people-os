@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { api } from "../api";
 import { ErrorBox } from "../error-box";
+import { useModalClose } from "../overlay";
 import { Button, Field } from "../ui";
 
 function useRun() {
@@ -23,6 +24,42 @@ function useRun() {
       }
     });
   return { error, pending, run };
+}
+
+/** Checkbox as a bordered row — easier to hit and to read than a bare box. */
+export function Toggle({ checked, onChange, children }: { checked: boolean; onChange: (on: boolean) => void; children: React.ReactNode }) {
+  return (
+    <label className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-2.5 text-sm transition ${checked ? "border-ink/30 bg-cream font-medium text-ink-2" : "border-line text-ink-soft hover:bg-cream"}`}>
+      <input type="checkbox" className="size-4 accent-red" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      {children}
+    </label>
+  );
+}
+
+/** Colour picker + its hex code in one pill. */
+export function ColorInput({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  return (
+    <span className="field flex! items-center gap-2 py-1.5!">
+      <input type="color" className="size-7 shrink-0 cursor-pointer rounded-full border-0 bg-transparent p-0" value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} />
+      <span className="font-mono text-xs text-ink-soft">{value}</span>
+    </span>
+  );
+}
+
+/** Cancel / save row at the bottom of a dialog form. */
+export function DialogActions({ pending, label }: { pending: boolean; label: string }) {
+  const tc = useTranslations("common");
+  const close = useModalClose();
+  return (
+    <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
+      {close && (
+        <Button type="button" variant="secondary" onClick={close}>
+          {tc("cancel")}
+        </Button>
+      )}
+      <Button disabled={pending}>{label}</Button>
+    </div>
+  );
 }
 
 export type AbsenceTypeDto = {
@@ -52,6 +89,7 @@ const FLAGS = [
 
 export function AbsenceTypeForm({ type }: { type?: AbsenceTypeDto }) {
   const t = useTranslations("settings");
+  const close = useModalClose();
   const { error, pending, run } = useRun();
   const [v, setV] = useState({
     code: type?.code ?? "",
@@ -69,33 +107,42 @@ export function AbsenceTypeForm({ type }: { type?: AbsenceTypeDto }) {
   });
   return (
     <form
-      className="space-y-2 rounded-xl border border-line p-3"
+      className="space-y-5"
       onSubmit={(e) => {
         e.preventDefault();
         const body = { ...v, nameEn: v.nameEn || null, minDays: v.minDays ? Number(v.minDays) : null, maxDays: v.maxDays ? Number(v.maxDays) : null };
-        run(() => (type ? api(`/settings/absence-types/${type.id}`, { method: "PATCH", body }) : api("/settings/absence-types", { body })));
+        run(() => (type ? api(`/settings/absence-types/${type.id}`, { method: "PATCH", body }) : api("/settings/absence-types", { body })), () => close?.());
       }}
     >
       <ErrorBox error={error} />
-      <div className="grid gap-2 sm:grid-cols-[1fr_2fr_2fr_auto_1fr_1fr]">
-        <input className="field font-mono text-xs" required placeholder={t("code")} value={v.code} onChange={(e) => setV({ ...v, code: e.target.value })} disabled={!!type} />
-        <input className="field" required placeholder={t("name")} value={v.nameUk} onChange={(e) => setV({ ...v, nameUk: e.target.value })} />
-        <input className="field" placeholder={t("nameEn")} value={v.nameEn} onChange={(e) => setV({ ...v, nameEn: e.target.value })} />
-        <input className="field h-10 w-14 p-1" type="color" value={v.color} onChange={(e) => setV({ ...v, color: e.target.value })} aria-label={t("color")} />
-        <input className="field" type="number" step="0.5" min="0.5" placeholder={t("minDays")} value={v.minDays} onChange={(e) => setV({ ...v, minDays: e.target.value })} />
-        <input className="field" type="number" step="0.5" min="0.5" placeholder={t("maxDays")} value={v.maxDays} onChange={(e) => setV({ ...v, maxDays: e.target.value })} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label={t("name")}>
+          <input className="field" required autoFocus value={v.nameUk} onChange={(e) => setV({ ...v, nameUk: e.target.value })} />
+        </Field>
+        <Field label={t("nameEn")}>
+          <input className="field" value={v.nameEn} onChange={(e) => setV({ ...v, nameEn: e.target.value })} />
+        </Field>
+        <Field label={t("code")}>
+          <input className="field font-mono" required value={v.code} onChange={(e) => setV({ ...v, code: e.target.value })} disabled={!!type} />
+        </Field>
+        <Field label={t("color")}>
+          <ColorInput value={v.color} onChange={(color) => setV({ ...v, color })} label={t("color")} />
+        </Field>
+        <Field label={t("minDays")}>
+          <input className="field" type="number" step="0.5" min="0.5" value={v.minDays} onChange={(e) => setV({ ...v, minDays: e.target.value })} />
+        </Field>
+        <Field label={t("maxDays")}>
+          <input className="field" type="number" step="0.5" min="0.5" value={v.maxDays} onChange={(e) => setV({ ...v, maxDays: e.target.value })} />
+        </Field>
       </div>
-      <div className="flex flex-wrap gap-4 text-sm">
+      <div className="grid gap-2 sm:grid-cols-2">
         {FLAGS.map(([key, label]) => (
-          <label key={key} className="flex items-center gap-1.5">
-            <input type="checkbox" checked={v[key]} onChange={(e) => setV({ ...v, [key]: e.target.checked })} />
+          <Toggle key={key} checked={v[key]} onChange={(on) => setV({ ...v, [key]: on })}>
             {t(label)}
-          </label>
+          </Toggle>
         ))}
       </div>
-      <Button disabled={pending} variant={type ? "secondary" : "primary"}>
-        {type ? t("commit") : t("newType")}
-      </Button>
+      <DialogActions pending={pending} label={type ? t("commit") : t("newType")} />
     </form>
   );
 }
@@ -119,6 +166,7 @@ export type PolicyDto = {
 
 export function PolicyForm({ policy, types }: { policy?: PolicyDto; types: { id: string; name: string }[] }) {
   const t = useTranslations("settings");
+  const close = useModalClose();
   const { error, pending, run } = useRun();
   const [v, setV] = useState({
     name: policy?.name ?? "",
@@ -145,7 +193,7 @@ export function PolicyForm({ policy, types }: { policy?: PolicyDto; types: { id:
   );
   return (
     <form
-      className="space-y-3 rounded-xl border border-line p-3"
+      className="space-y-5"
       onSubmit={(e) => {
         e.preventDefault();
         const body = {
@@ -155,13 +203,13 @@ export function PolicyForm({ policy, types }: { policy?: PolicyDto; types: { id:
           carryoverMax: Number(v.carryoverMax),
           availableAfterDays: Number(v.availableAfterDays),
         };
-        run(() => (policy ? api(`/settings/policies/${policy.id}`, { method: "PATCH", body }) : api("/settings/policies", { body })));
+        run(() => (policy ? api(`/settings/policies/${policy.id}`, { method: "PATCH", body }) : api("/settings/policies", { body })), () => close?.());
       }}
     >
       <ErrorBox error={error} />
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Field label={t("name")}>
-          <input className="field" required value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
+          <input className="field" required autoFocus value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
         </Field>
         <Field label={t("policyType")}>
           <select className="field" value={v.absenceTypeId} disabled={!!policy} onChange={(e) => setV({ ...v, absenceTypeId: e.target.value })}>
@@ -191,19 +239,15 @@ export function PolicyForm({ policy, types }: { policy?: PolicyDto; types: { id:
         </Field>
         <Field label={t("countDays")}>{sel("countDays", ["working", "calendar"], "countDayModes")}</Field>
       </div>
-      <div className="flex flex-wrap gap-4 text-sm">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={v.isDefault} onChange={(e) => setV({ ...v, isDefault: e.target.checked })} />
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Toggle checked={v.isDefault} onChange={(on) => setV({ ...v, isDefault: on })}>
           {t("isDefault")}
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={v.allowNegative} onChange={(e) => setV({ ...v, allowNegative: e.target.checked })} />
+        </Toggle>
+        <Toggle checked={v.allowNegative} onChange={(on) => setV({ ...v, allowNegative: on })}>
           {t("allowNegative")}
-        </label>
+        </Toggle>
       </div>
-      <Button disabled={pending} variant={policy ? "secondary" : "primary"}>
-        {policy ? t("commit") : t("newPolicy")}
-      </Button>
+      <DialogActions pending={pending} label={policy ? t("commit") : t("newPolicy")} />
     </form>
   );
 }
@@ -229,7 +273,7 @@ export function PolicyAssign({
   return (
     <div className="min-w-40">
       <select
-        className="field py-1"
+        className="field py-1!"
         disabled={pending}
         value={current ?? ""}
         aria-label={label}

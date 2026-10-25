@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { BundleForm, SystemForm } from "@/components/directories";
 import { ModalButton } from "@/components/overlay";
+import { sectionIcons } from "@/components/icons";
 import { Badge, Card, EmptyState, PageTitle } from "@/components/ui";
 import { getActor } from "@/server/auth/session";
 import { scopeOf } from "@/server/authz/policy";
@@ -27,7 +28,7 @@ export default async function SystemsPage() {
 
   return (
     <>
-      <PageTitle subtitle={t("systems.subtitle")}>{t("systems.title")}</PageTitle>
+      <PageTitle icon={sectionIcons.systems} subtitle={t("systems.subtitle")}>{t("systems.title")}</PageTitle>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card icon={ComputerIcon} title={t("systems.systems")} subtitle={t("systems.systemsHint")} className="self-start" actions={systems.length > 0 && newSystem("secondary")}>
           {systems.length ? (

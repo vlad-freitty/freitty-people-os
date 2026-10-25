@@ -1,56 +1,25 @@
 "use client";
 
 import {
-  AuditIcon,
-  Calendar03Icon,
   Cancel01Icon,
-  Clock01Icon,
-  DashboardSquare01Icon,
-  FileEditIcon,
-  FileImportIcon,
-  HierarchySquare01Icon,
   Key01Icon,
-  LaptopIcon,
-  Layers01Icon,
   Logout01Icon,
   Menu01Icon,
   Notification02Icon,
   PlusSignIcon,
   Search01Icon,
-  ServerStack01Icon,
-  Settings02Icon,
-  TaskDone01Icon,
-  UserGroupIcon,
-  UserShield01Icon,
-  Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { sectionIcons, type SectionIcon } from "./icons";
 import { LocaleToggle } from "./locale-toggle";
 
-const icons = {
-  dashboard: DashboardSquare01Icon,
-  tasks: TaskDone01Icon,
-  requests: FileEditIcon,
-  calendar: Calendar03Icon,
-  employees: UserGroupIcon,
-  org: HierarchySquare01Icon,
-  shifts: Clock01Icon,
-  payments: Wallet01Icon,
-  templates: Layers01Icon,
-  systems: ServerStack01Icon,
-  assets: LaptopIcon,
-  roles: UserShield01Icon,
-  import: FileImportIcon,
-  audit: AuditIcon,
-  access: Key01Icon,
-  settings: Settings02Icon,
-};
+const icons = sectionIcons;
 
-export type NavIcon = keyof typeof icons;
+export type NavIcon = SectionIcon;
 export type NavLink = { href: string; label: string; icon: NavIcon };
 export type NavGroup = { label: string; links: NavLink[] };
 

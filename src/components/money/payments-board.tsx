@@ -1,11 +1,14 @@
 "use client";
 
+import { Calculator01Icon, LockIcon, Wallet01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { api } from "../api";
 import { ErrorBox } from "../error-box";
-import { Badge, Button, Field } from "../ui";
+import { useModalClose } from "../overlay";
+import { Avatar, Badge, Button, Card, EmptyState, Field } from "../ui";
 
 type PaymentDto = {
   id: string;
@@ -40,17 +43,20 @@ function useRun() {
 
 export function NewPeriodForm({ companies }: { companies: { id: string; name: string }[] }) {
   const t = useTranslations("payments");
+  const tc = useTranslations("common");
+  const close = useModalClose();
   const { error, pending, run } = useRun();
   const month = new Date().toISOString().slice(0, 7);
   const [v, setV] = useState({ companyId: companies[0]?.id ?? "", periodStart: `${month}-01`, periodEnd: new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 0)).toISOString().slice(0, 10) });
   return (
     <form
-      className="flex flex-wrap items-end gap-3"
+      className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
-        run(() => api("/payments/periods", { body: v }));
+        run(() => api("/payments/periods", { body: v }), () => close?.());
       }}
     >
+      <ErrorBox error={error} />
       <Field label={t("company")}>
         <select className="field" value={v.companyId} onChange={(e) => setV({ ...v, companyId: e.target.value })}>
           {companies.map((c) => (
@@ -60,15 +66,21 @@ export function NewPeriodForm({ companies }: { companies: { id: string; name: st
           ))}
         </select>
       </Field>
-      <Field label={t("start")}>
-        <input className="field" type="date" value={v.periodStart} onChange={(e) => setV({ ...v, periodStart: e.target.value })} />
-      </Field>
-      <Field label={t("end")}>
-        <input className="field" type="date" value={v.periodEnd} onChange={(e) => setV({ ...v, periodEnd: e.target.value })} />
-      </Field>
-      <Button disabled={pending}>{t("newPeriod")}</Button>
-      <div className="w-full">
-        <ErrorBox error={error} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label={t("start")}>
+          <input className="field" type="date" value={v.periodStart} onChange={(e) => setV({ ...v, periodStart: e.target.value })} />
+        </Field>
+        <Field label={t("end")}>
+          <input className="field" type="date" value={v.periodEnd} onChange={(e) => setV({ ...v, periodEnd: e.target.value })} />
+        </Field>
+      </div>
+      <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
+        {close && (
+          <Button type="button" variant="secondary" onClick={close}>
+            {tc("cancel")}
+          </Button>
+        )}
+        <Button disabled={pending}>{t("newPeriod")}</Button>
       </div>
     </form>
   );
@@ -93,10 +105,12 @@ export function PeriodActions({ periodId, status }: { periodId: string; status: 
             })
           }
         >
+          <HugeiconsIcon icon={Calculator01Icon} size={17} />
           {status === "open" ? t("calculate") : t("recalculate")}
         </Button>
         {status === "calculated" && (
           <Button variant="secondary" disabled={pending} onClick={() => confirm(t("lockConfirm")) && run(() => api(`/payments/periods/${periodId}/lock`, { method: "POST" }))}>
+            <HugeiconsIcon icon={LockIcon} size={17} />
             {t("lock")}
           </Button>
         )}
@@ -119,11 +133,15 @@ export function PeriodActions({ periodId, status }: { periodId: string; status: 
   );
 }
 
-export function PaymentsTable({ payments, canManage, periodLocked }: { payments: PaymentDto[]; canManage: boolean; periodLocked: boolean }) {
+export function PaymentsTable({ payments, canManage, periodLocked, title }: { payments: PaymentDto[]; canManage: boolean; periodLocked: boolean; title?: string }) {
   const t = useTranslations("payments");
-  if (payments.length === 0) return <p className="text-sm text-ink-mute">{t("empty")}</p>;
+  const to = useTranslations("ops2");
   return (
-    <div className="overflow-x-auto rounded-card border border-edge bg-paper">
+    <Card icon={Wallet01Icon} tone="ok" title={title ?? to("paymentsList")} subtitle={to("paymentsCount", { n: payments.length })}>
+      {payments.length === 0 ? (
+        <EmptyState icon={Wallet01Icon} title={t("empty")} hint={to("paymentsEmptyHint")} />
+      ) : (
+    <div className="-mx-5 overflow-x-auto border-t border-line">
       <table className="table">
         <thead>
           <tr>
@@ -141,6 +159,8 @@ export function PaymentsTable({ payments, canManage, periodLocked }: { payments:
         </tbody>
       </table>
     </div>
+      )}
+    </Card>
   );
 }
 
@@ -155,9 +175,14 @@ function PaymentRow({ p, canManage, periodLocked }: { p: PaymentDto; canManage: 
   return (
     <tr>
       <td>
-        <span className="font-medium">{p.employee.name}</span>
-        <span className="block text-xs text-ink-mute">
-          {te(p.employee.employmentType as "employee")} · {p.employee.department}
+        <span className="flex items-center gap-2.5">
+          <Avatar name={p.employee.name} />
+          <span className="min-w-0">
+            <span className="block font-medium whitespace-nowrap text-ink-2">{p.employee.name}</span>
+            <span className="block text-xs text-ink-mute">
+              {te(p.employee.employmentType as "employee")} · {p.employee.department}
+            </span>
+          </span>
         </span>
       </td>
       <td className="text-xs">
@@ -179,15 +204,15 @@ function PaymentRow({ p, canManage, periodLocked }: { p: PaymentDto; canManage: 
               run(() => api(`/payments/${p.id}/adjustments`, { body: { amount: Number(adj.amount), comment: adj.comment } }), () => setAdj({ amount: "", comment: "" }));
             }}
           >
-            <input className="field w-24 py-1 text-xs" type="number" step="0.01" required placeholder={t("amount")} value={adj.amount} onChange={(e) => setAdj({ ...adj, amount: e.target.value })} />
-            <input className="field w-48 py-1 text-xs" required placeholder={t("comment")} value={adj.comment} onChange={(e) => setAdj({ ...adj, comment: e.target.value })} />
+            <input className="field w-24! py-1! text-xs!" type="number" step="0.01" required placeholder={t("amount")} value={adj.amount} onChange={(e) => setAdj({ ...adj, amount: e.target.value })} />
+            <input className="field w-48! py-1! text-xs!" required placeholder={t("comment")} value={adj.comment} onChange={(e) => setAdj({ ...adj, comment: e.target.value })} />
             <Button variant="ghost" className="py-1 text-xs" disabled={pending}>
               {t("adjust")}
             </Button>
           </form>
         )}
       </td>
-      <td className="whitespace-nowrap font-mono">
+      <td className="font-mono font-bold whitespace-nowrap text-ink-2">
         {p.total} {p.currency}
       </td>
       <td>
@@ -220,7 +245,7 @@ function PaymentRow({ p, canManage, periodLocked }: { p: PaymentDto; canManage: 
                   status({ status: "paid", paymentRef: ref });
                 }}
               >
-                <input className="field w-28 py-1 text-xs" required placeholder={t("paymentRef")} value={ref} onChange={(e) => setRef(e.target.value)} />
+                <input className="field w-28! py-1! text-xs!" required placeholder={t("paymentRef")} value={ref} onChange={(e) => setRef(e.target.value)} />
                 <Button className="py-1 text-xs" disabled={pending}>
                   {t("pay")}
                 </Button>
@@ -240,18 +265,20 @@ export function CoefficientForm({ company }: { company: { id: string; name: stri
   const [value, setValue] = useState(String(company.coefficient));
   return (
     <form
-      className="flex flex-wrap items-center gap-2 border-b border-line/60 py-1.5 text-sm"
+      className="flex flex-wrap items-center gap-2 py-2.5 text-sm"
       onSubmit={(e) => {
         e.preventDefault();
         run(() => api("/payments/coefficients", { method: "PUT", body: { companyId: company.id, coefficient: Number(value) } }));
       }}
     >
-      <span className="w-32 font-medium">{company.name}</span>
-      <input className="field w-24 py-1" type="number" step="0.05" min="0.5" max="5" value={value} onChange={(e) => setValue(e.target.value)} aria-label={company.name} />
-      <Button variant="ghost" className="py-1 text-xs" disabled={pending}>
+      <span className="min-w-0 flex-1 truncate font-medium text-ink-2">{company.name}</span>
+      <input className="field w-24! py-1!" type="number" step="0.05" min="0.5" max="5" value={value} onChange={(e) => setValue(e.target.value)} aria-label={company.name} />
+      <Button variant="secondary" disabled={pending}>
         {t("save")}
       </Button>
-      <ErrorBox error={error} />
+      <div className="w-full empty:hidden">
+        <ErrorBox error={error} />
+      </div>
     </form>
   );
 }

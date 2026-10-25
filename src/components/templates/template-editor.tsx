@@ -1,12 +1,27 @@
 "use client";
 
+import {
+  Add01Icon,
+  Alert02Icon,
+  ArrowDown01Icon,
+  ArrowDown02Icon,
+  ArrowUp01Icon,
+  CheckmarkCircle02Icon,
+  Delete02Icon,
+  Settings02Icon,
+  TextFontIcon,
+  WorkflowSquare01Icon,
+  WorkHistoryIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { localized } from "@/lib/format";
 import { api, ApiRequestError } from "../api";
 import { ErrorBox } from "../error-box";
-import { Badge, Button, Card, Field } from "../ui";
+import { Badge, Button, Card, Empty, Field, IconTile } from "../ui";
+import { ruleIcons, stepIcons } from "./icons";
 
 type FieldType = "text" | "textarea" | "number" | "date" | "date_range" | "select" | "multiselect" | "person" | "file" | "systems";
 type Option = { value: string; labelUk: string; labelEn?: string | null };
@@ -65,10 +80,26 @@ const move = <T,>(list: T[], i: number, dir: -1 | 1) => {
   return copy;
 };
 
+/** Small round icon button (move up / down / remove). */
+function IconAction({ icon, label, onClick, danger = false }: { icon: IconSvgElement; label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={`inline-flex size-8 items-center justify-center rounded-full text-ink-mute transition disabled:opacity-40 ${danger ? "hover:bg-red-tint hover:text-red" : "hover:bg-cream-deep hover:text-ink"}`}
+    >
+      <HugeiconsIcon icon={icon} size={16} />
+    </button>
+  );
+}
+
 /** Template constructor (PRD 4): form fields + linear stages of parallel steps. Arrows instead of drag-and-drop. */
 export function TemplateEditor({ template, people, roles, childTypes, departments }: EditorProps) {
   const t = useTranslations("templates");
   const tt = useTranslations();
+  const to = useTranslations("ops2");
   const locale = useLocale();
   const router = useRouter();
   const [content, setContent] = useState<Content>(template.content);
@@ -159,16 +190,25 @@ export function TemplateEditor({ template, people, roles, childTypes, department
 
   return (
     <div className="space-y-6">
-      {ro && <p className="rounded-xl bg-warn-tint px-3 py-2 text-sm text-warn">{t("readOnly")}</p>}
-      {template.editingVersion && (
-        <p className="text-sm text-ink-soft">
-          {t("editing", { v: template.editingVersion.version, status: t(`versionStatus.${template.editingVersion.status}`) })} ·{" "}
-          {t(`kinds.${template.kind}` as "kinds.generic")} · <code>{template.code}</code>
+      {ro && (
+        <p className="flex items-center gap-2 rounded-2xl bg-warn-tint px-4 py-3 text-sm text-warn">
+          <HugeiconsIcon icon={Alert02Icon} size={18} />
+          {t("readOnly")}
         </p>
+      )}
+      {template.editingVersion && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={template.editingVersion.status === "published" ? "ok" : template.editingVersion.status === "draft" ? "warn" : "neutral"}>
+            {t("editing", { v: template.editingVersion.version, status: t(`versionStatus.${template.editingVersion.status}`) })}
+          </Badge>
+          <Badge>{to("fieldsCount", { n: content.fields.length })}</Badge>
+          <Badge>{to("stagesCount", { n: groups.length })}</Badge>
+          <Badge>{to("stepsCount", { n: content.steps.length })}</Badge>
+        </div>
       )}
 
       {/* ── settings ── */}
-      <Card title={t("meta")}>
+      <Card icon={Settings02Icon} tone="neutral" title={t("meta")} subtitle={to("metaHint")}>
         <fieldset disabled={ro || pending} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label={t("nameUk")}>
@@ -186,13 +226,25 @@ export function TemplateEditor({ template, people, roles, childTypes, department
       </Card>
 
       {/* ── fields ── */}
-      <Card title={t("fields")}>
+      <Card icon={TextFontIcon} tone="blue" title={t("fields")} subtitle={to("fieldsHint")}>
         <fieldset disabled={ro} className="space-y-3">
+          {content.fields.length === 0 && <Empty icon={TextFontIcon}>{to("noFields")}</Empty>}
           {content.fields.map((f, i) => (
-            <div key={i} className="rounded-xl border border-line p-3">
-              <div className="grid gap-3 sm:grid-cols-[1fr_1.5fr_1.5fr_1fr_auto]">
+            <div key={i} className="rounded-2xl border border-line p-4">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-tint text-xs font-bold text-blue">{i + 1}</span>
+                <span className="min-w-0 flex-1 truncate text-sm font-bold text-ink-2">{f.labelUk || f.key}</span>
+                <Badge>{tt(`fieldType.${f.type}`)}</Badge>
+                {f.required && <Badge tone="red">{t("required")}</Badge>}
+                <span className="flex">
+                  <IconAction icon={ArrowUp01Icon} label={t("moveUp")} onClick={() => setContent((c) => ({ ...c, fields: move(c.fields, i, -1) }))} />
+                  <IconAction icon={ArrowDown01Icon} label={t("moveDown")} onClick={() => setContent((c) => ({ ...c, fields: move(c.fields, i, 1) }))} />
+                  <IconAction icon={Delete02Icon} label={t("remove")} danger onClick={() => setContent((c) => ({ ...c, fields: c.fields.filter((_, j) => j !== i) }))} />
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Field label={t("key")}>
-                  <input className="field font-mono text-xs" value={f.key} onChange={(e) => setField(i, { key: e.target.value })} />
+                  <input className="field font-mono text-xs!" value={f.key} onChange={(e) => setField(i, { key: e.target.value })} />
                 </Field>
                 <Field label={t("label")}>
                   <input className="field" value={f.labelUk} onChange={(e) => setField(i, { labelUk: e.target.value })} />
@@ -209,51 +261,43 @@ export function TemplateEditor({ template, people, roles, childTypes, department
                     ))}
                   </select>
                 </Field>
-                <div className="flex items-end gap-1">
-                  <Button type="button" variant="ghost" className="px-2" title={t("moveUp")} onClick={() => setContent((c) => ({ ...c, fields: move(c.fields, i, -1) }))}>
-                    ↑
-                  </Button>
-                  <Button type="button" variant="ghost" className="px-2" title={t("moveDown")} onClick={() => setContent((c) => ({ ...c, fields: move(c.fields, i, 1) }))}>
-                    ↓
-                  </Button>
-                  <Button type="button" variant="ghost" className="px-2" title={t("remove")} onClick={() => setContent((c) => ({ ...c, fields: c.fields.filter((_, j) => j !== i) }))}>
-                    ✕
-                  </Button>
-                </div>
               </div>
-              <label className="mt-2 flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={f.required} onChange={(e) => setField(i, { required: e.target.checked })} />
+              <label className="mt-3 flex items-center gap-2 text-sm">
+                <input type="checkbox" className="size-4 accent-red" checked={f.required} onChange={(e) => setField(i, { required: e.target.checked })} />
                 {t("required")}
               </label>
               {(f.type === "select" || f.type === "multiselect") && <OptionsEditor field={f} onChange={(options) => setField(i, { options })} />}
             </div>
           ))}
           <Button type="button" variant="secondary" onClick={addField}>
+            <HugeiconsIcon icon={Add01Icon} size={16} />
             {t("addField")}
           </Button>
         </fieldset>
       </Card>
 
       {/* ── stages & steps ── */}
-      <Card title={t("groups")}>
-        <p className="mb-4 text-sm text-ink-soft">{t("groupsHint")}</p>
-        <fieldset disabled={ro} className="space-y-5">
+      <Card icon={WorkflowSquare01Icon} tone="red" title={t("groups")} subtitle={t("groupsHint")}>
+        <fieldset disabled={ro} className="space-y-1">
+          {groups.length === 0 && <Empty icon={WorkflowSquare01Icon}>{to("noStages")}</Empty>}
           {groups.map((g, gi) => (
-            <div key={g} className="rounded-card border border-line bg-cream/40 p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-base font-bold">{t("group", { n: gi + 1 })}</h3>
-                <div className="flex gap-1">
-                  <Button type="button" variant="ghost" className="px-2" title={t("moveUp")} onClick={() => moveGroup(g, -1)}>
-                    ↑
-                  </Button>
-                  <Button type="button" variant="ghost" className="px-2" title={t("moveDown")} onClick={() => moveGroup(g, 1)}>
-                    ↓
-                  </Button>
-                  <Button type="button" variant="ghost" className="px-2" title={t("remove")} onClick={() => setContent((c) => ({ ...c, steps: c.steps.filter((s) => s.orderGroup !== g) }))}>
-                    ✕
-                  </Button>
+            <div key={g}>
+              {gi > 0 && (
+                <div className="flex justify-center py-1 text-ink-mute" aria-hidden>
+                  <HugeiconsIcon icon={ArrowDown02Icon} size={20} />
                 </div>
-              </div>
+              )}
+              <div className="rounded-card border border-line bg-cream/50 p-4">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-bold text-white">{gi + 1}</span>
+                  <h3 className="text-base font-bold text-ink-2">{t("group", { n: gi + 1 })}</h3>
+                  {indexed.filter((x) => x.s.orderGroup === g).length > 1 && <Badge>{to("parallel")}</Badge>}
+                  <div className="ml-auto flex">
+                    <IconAction icon={ArrowUp01Icon} label={t("moveUp")} onClick={() => moveGroup(g, -1)} />
+                    <IconAction icon={ArrowDown01Icon} label={t("moveDown")} onClick={() => moveGroup(g, 1)} />
+                    <IconAction icon={Delete02Icon} label={t("remove")} danger onClick={() => setContent((c) => ({ ...c, steps: c.steps.filter((s) => s.orderGroup !== g) }))} />
+                  </div>
+                </div>
               <div className="space-y-3">
                 {indexed
                   .filter((x) => x.s.orderGroup === g)
@@ -273,22 +317,30 @@ export function TemplateEditor({ template, people, roles, childTypes, department
                     />
                   ))}
               </div>
-              <Button type="button" variant="ghost" className="mt-2" onClick={() => addStep(g)}>
-                + {t("addStep")}
-              </Button>
+                <Button type="button" variant="ghost" className="mt-2" onClick={() => addStep(g)}>
+                  <HugeiconsIcon icon={Add01Icon} size={16} />
+                  {t("addStep")}
+                </Button>
+              </div>
             </div>
           ))}
-          <Button type="button" variant="secondary" onClick={addGroup}>
-            {t("addGroup")}
-          </Button>
+          <div className="pt-3">
+            <Button type="button" variant="secondary" onClick={addGroup}>
+              <HugeiconsIcon icon={Add01Icon} size={16} />
+              {t("addGroup")}
+            </Button>
+          </div>
         </fieldset>
       </Card>
 
       {/* ── save / publish ── */}
-      <div className="sticky bottom-0 -mx-4 space-y-3 border-t border-line bg-cream/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6">
+      <div className="sticky bottom-0 -mx-4 space-y-3 border-t border-line bg-paper/95 px-4 py-4 shadow-[0_-4px_12px_rgba(28,39,76,0.06)] backdrop-blur sm:-mx-6 sm:px-6">
         {errors.length > 0 ? (
-          <div className="rounded-xl bg-red-tint px-3 py-2 text-sm text-red-strong">
-            <p className="font-medium">{t("errors")}</p>
+          <div className="rounded-2xl bg-red-tint px-4 py-3 text-sm text-red-strong">
+            <p className="flex items-center gap-2 font-medium">
+              <HugeiconsIcon icon={Alert02Icon} size={18} />
+              {t("errors")}
+            </p>
             <ul className="list-disc pl-5 font-mono text-xs">
               {errors.map((e) => (
                 <li key={e}>{e}</li>
@@ -296,12 +348,15 @@ export function TemplateEditor({ template, people, roles, childTypes, department
             </ul>
           </div>
         ) : (
-          <p className="text-sm text-ok">{t("noErrors")}</p>
+          <p className="flex items-center gap-2 text-sm font-medium text-ok-strong">
+            <HugeiconsIcon icon={CheckmarkCircle02Icon} size={18} />
+            {t("noErrors")}
+          </p>
         )}
         {notice && <p className="text-sm text-ok">{notice}</p>}
         <ErrorBox error={errors.length ? null : error} />
         {!ro && (
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button variant="secondary" disabled={pending} onClick={saveDraft}>
               {t("saveDraft")}
             </Button>
@@ -314,14 +369,14 @@ export function TemplateEditor({ template, people, roles, childTypes, department
         )}
       </div>
 
-      <Card title={t("versions")}>
-        <ul className="space-y-1 text-sm">
+      <Card icon={WorkHistoryIcon} tone="neutral" title={t("versions")}>
+        <ul className="-my-2 divide-y divide-line text-sm">
           {template.versions.map((v) => (
-            <li key={v.version} className="flex items-center gap-3">
-              <span className="font-mono">v{v.version}</span>
+            <li key={v.version} className="flex flex-wrap items-center gap-3 py-2.5">
+              <span className="font-mono font-bold text-ink-2">v{v.version}</span>
               <Badge tone={v.status === "published" ? "ok" : v.status === "draft" ? "warn" : "neutral"}>{t(`versionStatus.${v.status}`)}</Badge>
               <span className="text-xs text-ink-mute">
-                {v.fieldCount} · {v.stepCount}
+                {to("fieldsCount", { n: v.fieldCount })} · {to("stepsCount", { n: v.stepCount })}
                 {v.publishedAt && <> · {new Date(v.publishedAt).toLocaleDateString(locale === "uk" ? "uk-UA" : "en-US")}</>}
               </span>
             </li>
@@ -351,7 +406,7 @@ function OptionsEditor({ field, onChange }: { field: FieldDraft; onChange: (o: F
       {!source && (
         <Field label={`${t("options")} · value | UA | EN`}>
           <textarea
-            className="field min-h-20 font-mono text-xs"
+            className="field min-h-20 font-mono text-xs!"
             value={text}
             onChange={(e) => {
               setText(e.target.value);
@@ -400,8 +455,24 @@ function StepEditor({
   const earlier = groupNumbers.filter((g) => g < step.orderGroup);
 
   return (
-    <div className="rounded-xl border border-line bg-paper p-3">
-      <div className="grid gap-3 sm:grid-cols-[2fr_2fr_1.3fr_auto]">
+    <div className="rounded-2xl border border-line bg-paper p-4">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <IconTile icon={stepIcons[step.stepType]} tone={step.stepType === "approve" ? "ok" : step.stepType === "child_request" ? "blue" : "neutral"} size={32} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-bold text-ink-2">{step.nameUk || tt(`step.type.${step.stepType}`)}</span>
+          <span className="flex items-center gap-1 text-xs text-ink-mute">
+            <HugeiconsIcon icon={ruleIcons[step.assigneeRule]} size={13} className="shrink-0" />
+            <span className="truncate">{tt(`rule.${step.assigneeRule}`)}</span>
+            <span className="shrink-0">· {t("sla")}: {step.slaDays}</span>
+          </span>
+        </span>
+        <span className="flex">
+          <IconAction icon={ArrowUp01Icon} label={t("moveUp")} onClick={onUp} />
+          <IconAction icon={ArrowDown01Icon} label={t("moveDown")} onClick={onDown} />
+          <IconAction icon={Delete02Icon} label={t("remove")} danger onClick={onRemove} />
+        </span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-[2fr_2fr_1.3fr]">
         <Field label={t("stepName")}>
           <input className="field" value={step.nameUk} onChange={(e) => onChange({ nameUk: e.target.value })} />
         </Field>
@@ -417,17 +488,6 @@ function StepEditor({
             ))}
           </select>
         </Field>
-        <div className="flex items-end gap-1">
-          <Button type="button" variant="ghost" className="px-2" title={t("moveUp")} onClick={onUp}>
-            ↑
-          </Button>
-          <Button type="button" variant="ghost" className="px-2" title={t("moveDown")} onClick={onDown}>
-            ↓
-          </Button>
-          <Button type="button" variant="ghost" className="px-2" title={t("remove")} onClick={onRemove}>
-            ✕
-          </Button>
-        </div>
       </div>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -490,6 +550,7 @@ function StepEditor({
               <label key={k} className="flex items-center gap-1.5 font-mono text-xs">
                 <input
                   type="checkbox"
+                  className="size-4 accent-red"
                   checked={step.requiredFields.includes(k)}
                   onChange={(e) => onChange({ requiredFields: e.target.checked ? [...step.requiredFields, k] : step.requiredFields.filter((x) => x !== k) })}
                 />

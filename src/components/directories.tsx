@@ -1,6 +1,6 @@
 "use client";
 
-import { Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowTurnBackwardIcon, Cancel01Icon, Upload04Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -158,107 +158,135 @@ export function BundleForm({
 
 export function AssetForm() {
   const t = useTranslations("assets");
+  const to = useTranslations("ops2");
+  const close = useModalClose();
   const { error, pending, run } = useRun();
   const empty = { type: "laptop", name: "", serialOrSeat: "", monthlyCost: "", currency: "USD" };
   const [v, setV] = useState(empty);
   const bind = (k: keyof typeof v) => ({ value: v[k], onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setV((s) => ({ ...s, [k]: e.target.value })), className: "field" });
   return (
     <form
-      className="space-y-2"
+      className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
         const body = { ...v, serialOrSeat: v.serialOrSeat || null, monthlyCost: v.monthlyCost === "" ? null : Number(v.monthlyCost), currency: v.monthlyCost === "" ? null : v.currency };
-        run(() => api("/assets", { body }), () => setV(empty));
+        run(() => api("/assets", { body }), () => (setV(empty), close?.()));
       }}
     >
       <ErrorBox error={error} />
-      <div className="grid gap-2 sm:grid-cols-5">
-        <select {...bind("type")} aria-label={t("kind")}>
-          {(["laptop", "phone", "license", "other"] as const).map((x) => (
-            <option key={x} value={x}>
-              {t(`type.${x}`)}
-            </option>
-          ))}
-        </select>
-        <input required placeholder={t("name")} {...bind("name")} />
-        <input placeholder={t("serial")} {...bind("serialOrSeat")} />
-        <input type="number" min={0} step="0.01" placeholder={t("cost")} {...bind("monthlyCost")} />
-        <input maxLength={3} placeholder={t("currency")} {...bind("currency")} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label={t("kind")}>
+          <select {...bind("type")}>
+            {(["laptop", "phone", "license", "other"] as const).map((x) => (
+              <option key={x} value={x}>
+                {t(`type.${x}`)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("name")}>
+          <input required autoFocus placeholder={to("assetNamePlaceholder")} {...bind("name")} />
+        </Field>
+        <Field label={t("serial")} className="sm:col-span-2">
+          <input {...bind("serialOrSeat")} />
+        </Field>
+        <Field label={t("cost")}>
+          <input type="number" min={0} step="0.01" {...bind("monthlyCost")} />
+        </Field>
+        <Field label={t("currency")}>
+          <input maxLength={3} {...bind("currency")} />
+        </Field>
       </div>
-      <Button disabled={pending}>{t("newAsset")}</Button>
+      <p className="text-xs text-ink-mute">{to("assetCostHint")}</p>
+      <DialogActions pending={pending} label={t("newAsset")} />
     </form>
   );
 }
 
 export function AssetAssign({ assetId, assigned, people }: { assetId: string; assigned: boolean; people: Person[] }) {
   const t = useTranslations("assets");
+  const to = useTranslations("ops2");
   const { error, pending, run } = useRun();
   const [employeeId, setEmployeeId] = useState("");
   if (assigned) {
     return (
-      <>
-        <Button variant="ghost" className="py-1 text-xs" disabled={pending} onClick={() => run(() => api(`/assets/${assetId}/assignee`, { method: "PUT", body: { employeeId: null } }))}>
+      <span className="flex flex-col items-end gap-1">
+        <Button variant="secondary" disabled={pending} onClick={() => run(() => api(`/assets/${assetId}/assignee`, { method: "PUT", body: { employeeId: null } }))}>
+          <HugeiconsIcon icon={ArrowTurnBackwardIcon} size={16} />
           {t("return")}
         </Button>
         <ErrorBox error={error} />
-      </>
+      </span>
     );
   }
   return (
-    <div className="flex gap-1">
-      <select className="field py-1 text-xs" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} aria-label={t("assignedTo")}>
-        <option value="" />
-        {people.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.label}
-          </option>
-        ))}
-      </select>
-      <Button variant="secondary" className="py-1 text-xs" disabled={pending || !employeeId} onClick={() => run(() => api(`/assets/${assetId}/assignee`, { method: "PUT", body: { employeeId } }))}>
-        {t("assign")}
-      </Button>
+    <span className="flex flex-col items-end gap-1">
+      <span className="flex gap-1.5">
+        <select className="field w-44! py-1.5! text-xs!" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} aria-label={t("assignedTo")}>
+          <option value="">{to("assignTo")}</option>
+          {people.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+        <Button disabled={pending || !employeeId} onClick={() => run(() => api(`/assets/${assetId}/assignee`, { method: "PUT", body: { employeeId } }))}>
+          {t("assign")}
+        </Button>
+      </span>
       <ErrorBox error={error} />
-    </div>
+    </span>
   );
 }
 
 export function DocumentUpload({ employeeId }: { employeeId: string }) {
   const t = useTranslations("profile");
+  const to = useTranslations("ops2");
+  const close = useModalClose();
   const { error, pending, run } = useRun();
   const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState("contract");
   const [validTo, setValidTo] = useState("");
   return (
     <form
-      className="space-y-2 border-t border-line pt-3"
+      className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
         if (!file) return;
-        run(async () => {
-          const body = new FormData();
-          body.append("file", file);
-          body.append("type", type);
-          body.append("validTo", validTo);
-          const res = await fetch(`/api/v1/employees/${employeeId}/documents`, { method: "POST", body });
-          if (!res.ok) throw new ApiRequestError((await res.json().catch(() => ({}))).error ?? { code: "internal_error" }, res.status);
-        });
+        run(
+          async () => {
+            const body = new FormData();
+            body.append("file", file);
+            body.append("type", type);
+            body.append("validTo", validTo);
+            const res = await fetch(`/api/v1/employees/${employeeId}/documents`, { method: "POST", body });
+            if (!res.ok) throw new ApiRequestError((await res.json().catch(() => ({}))).error ?? { code: "internal_error" }, res.status);
+          },
+          () => (setFile(null), close?.()),
+        );
       }}
     >
       <ErrorBox error={error} />
-      <div className="grid grid-cols-2 gap-2">
-        <select className="field" value={type} onChange={(e) => setType(e.target.value)} aria-label={t("uploadDocument")}>
-          {(["contract", "nda", "act", "invoice", "w9", "other"] as const).map((d) => (
-            <option key={d} value={d}>
-              {t(`docType.${d}`)}
-            </option>
-          ))}
-        </select>
-        <input type="date" className="field" value={validTo} onChange={(e) => setValidTo(e.target.value)} aria-label={t("validTo")} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label={to("documentType")}>
+          <select className="field" value={type} onChange={(e) => setType(e.target.value)}>
+            {(["contract", "nda", "act", "invoice", "w9", "other"] as const).map((d) => (
+              <option key={d} value={d}>
+                {t(`docType.${d}`)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("validTo")}>
+          <input type="date" className="field" value={validTo} onChange={(e) => setValidTo(e.target.value)} />
+        </Field>
       </div>
-      <input type="file" className="field" required onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-      <Button variant="secondary" disabled={pending || !file}>
-        {t("uploadDocument")}
-      </Button>
+      <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-line-strong px-4 py-6 text-center text-sm text-ink-soft hover:bg-cream">
+        <HugeiconsIcon icon={Upload04Icon} size={26} className="text-ink-mute" />
+        <span className="font-medium text-ink-2">{file ? file.name : to("chooseFile")}</span>
+        <input type="file" className="max-w-full text-xs" required onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+      </label>
+      <DialogActions pending={pending || !file} label={t("uploadDocument")} />
     </form>
   );
 }

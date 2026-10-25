@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { api } from "./api";
 import { ErrorBox } from "./error-box";
-import { Button, Field } from "./ui";
+import { Button, Field, FormSection } from "./ui";
 
 export type EmployeeFormValues = {
   firstName: string;
@@ -104,116 +104,135 @@ export function EmployeeForm({
   };
 
   return (
-    <form onSubmit={submit} className="space-y-5">
+    <form onSubmit={submit} className="space-y-7">
       <ErrorBox error={error} />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t("employee.firstName")}>
-          <input required {...bind("firstName")} />
-        </Field>
-        <Field label={t("employee.lastName")}>
-          <input required {...bind("lastName")} />
-        </Field>
-        <Field label={t("employee.workEmail")}>
-          <input required type="email" {...bind("workEmail")} />
-        </Field>
-        <Field label={t("employee.phone")}>
-          <input {...bind("phone")} />
-        </Field>
-        <Field label={t("employee.position")}>
-          <input required {...bind("position")} />
-        </Field>
-        <Field label={t("employee.department")}>
-          <select required {...bind("departmentId")}>
-            <option value="" />
-            {departments.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("employee.location")}>
-          <select {...bind("locationId")}>
-            <option value="">{t("common.none")}</option>
-            {locations.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("employee.manager")}>
-          <select {...bind("managerId")}>
-            <option value="">{t("common.none")}</option>
-            {managers
-              .filter((m) => m.id !== employeeId)
-              .map((o) => (
+
+      <FormSection n={1} title={t("people2.sectionPerson")}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("employee.firstName")}>
+            <input required {...bind("firstName")} />
+          </Field>
+          <Field label={t("employee.lastName")}>
+            <input required {...bind("lastName")} />
+          </Field>
+          <Field label={t("employee.birthDate")}>
+            <input type="date" {...bind("birthDate")} />
+          </Field>
+          <Field label={t("employee.locale")}>
+            <select {...bind("locale")}>
+              {(["uk", "en"] as const).map((x) => (
+                <option key={x} value={x}>
+                  {t(`locales.${x}`)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("employee.photo")} className="sm:col-span-2">
+            <input type="url" placeholder="https://" {...bind("photo")} />
+          </Field>
+        </div>
+        <label className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3 text-sm">
+          <input type="checkbox" className="size-4 accent-red" checked={v.showBirthday} onChange={(e) => set("showBirthday", e.target.checked)} />
+          {t("employee.showBirthday")}
+        </label>
+      </FormSection>
+
+      <FormSection n={2} title={t("people2.sectionContacts")}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("employee.workEmail")}>
+            <input required type="email" {...bind("workEmail")} />
+          </Field>
+          <Field label={t("employee.phone")}>
+            <input type="tel" {...bind("phone")} />
+          </Field>
+        </div>
+      </FormSection>
+
+      <FormSection n={3} title={t("people2.sectionJob")}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("employee.position")}>
+            <input required {...bind("position")} />
+          </Field>
+          <Field label={t("employee.department")}>
+            <select required {...bind("departmentId")}>
+              <option value="" />
+              {departments.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.label}
                 </option>
               ))}
-          </select>
-        </Field>
-        <Field label={t("employee.employmentType")}>
-          <select {...bind("employmentType")}>
-            {(["employee", "contractor"] as const).map((x) => (
-              <option key={x} value={x}>
-                {t(`employmentType.${x}`)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("employee.grade")}>
-          <select {...bind("grade")}>
-            <option value="">{t("common.none")}</option>
-            {(["senior_management", "middle_management", "first_line_management", "individual_contributor"] as const).map((x) => (
-              <option key={x} value={x}>
-                {t(`grade.${x}`)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("employee.status")}>
-          <select {...bind("status")}>
-            {(["candidate", "onboarding", "active", "offboarding", "left"] as const).map((x) => (
-              <option key={x} value={x}>
-                {t(`status.${x}`)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("employee.hireDate")}>
-          <input type="date" {...bind("hireDate")} />
-        </Field>
-        <Field label={t("employee.probationEnd")}>
-          <input type="date" {...bind("probationEnd")} />
-        </Field>
-        <Field label={t("employee.birthDate")}>
-          <input type="date" {...bind("birthDate")} />
-        </Field>
-        <Field label={t("employee.locale")}>
-          <select {...bind("locale")}>
-            {(["uk", "en"] as const).map((x) => (
-              <option key={x} value={x}>
-                {t(`locales.${x}`)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("employee.photo")} className="sm:col-span-2">
-          <input type="url" {...bind("photo")} />
-        </Field>
-      </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={v.showBirthday} onChange={(e) => set("showBirthday", e.target.checked)} />
-        {t("employee.showBirthday")}
-      </label>
-      <div className="flex gap-3">
+            </select>
+          </Field>
+          <Field label={t("employee.manager")}>
+            <select {...bind("managerId")}>
+              <option value="">{t("common.none")}</option>
+              {managers
+                .filter((m) => m.id !== employeeId)
+                .map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <Field label={t("employee.location")}>
+            <select {...bind("locationId")}>
+              <option value="">{t("common.none")}</option>
+              {locations.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("employee.employmentType")}>
+            <select {...bind("employmentType")}>
+              {(["employee", "contractor"] as const).map((x) => (
+                <option key={x} value={x}>
+                  {t(`employmentType.${x}`)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("employee.grade")}>
+            <select {...bind("grade")}>
+              <option value="">{t("common.none")}</option>
+              {(["senior_management", "middle_management", "first_line_management", "individual_contributor"] as const).map((x) => (
+                <option key={x} value={x}>
+                  {t(`grade.${x}`)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+      </FormSection>
+
+      <FormSection n={4} title={t("people2.sectionStatus")} hint={t("people2.sectionStatusHint")}>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label={t("employee.status")}>
+            <select {...bind("status")}>
+              {(["candidate", "onboarding", "active", "offboarding", "left"] as const).map((x) => (
+                <option key={x} value={x}>
+                  {t(`status.${x}`)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("employee.hireDate")}>
+            <input type="date" {...bind("hireDate")} />
+          </Field>
+          <Field label={t("employee.probationEnd")}>
+            <input type="date" {...bind("probationEnd")} />
+          </Field>
+        </div>
+      </FormSection>
+
+      <div className="flex flex-col-reverse gap-2 border-t border-line pt-5 sm:flex-row sm:justify-end">
+        <Button type="button" variant="secondary" onClick={() => router.back()}>
+          {t("common.cancel")}
+        </Button>
         <Button type="submit" disabled={pending}>
           {employeeId ? t("common.save") : t("common.create")}
-        </Button>
-        <Button type="button" variant="ghost" onClick={() => router.back()}>
-          {t("common.cancel")}
         </Button>
       </div>
     </form>

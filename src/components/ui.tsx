@@ -1,3 +1,4 @@
+import { ArrowRight01Icon, CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
@@ -24,10 +25,26 @@ export function LinkButton({ variant = "primary", className = "", ...props }: Co
   return <Link className={buttonClass(variant, className)} {...props} />;
 }
 
+/** "Усі →" in a card header. */
+export function CardLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link href={href} className="inline-flex items-center gap-1 text-sm font-medium text-red hover:text-red-strong">
+      {children}
+      <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
+    </Link>
+  );
+}
+
+/**
+ * Card: optional icon tile + title (+ subtitle) on the left, actions or a "see all" link on the right.
+ * Every block of a page is a Card with an icon, so pages read as separate, labelled blocks.
+ */
 export function Card({
   title,
   subtitle,
   icon,
+  tone = "red",
+  link,
   actions,
   children,
   className = "",
@@ -35,22 +52,29 @@ export function Card({
   title?: ReactNode;
   subtitle?: ReactNode;
   icon?: IconSvgElement;
+  tone?: TileTone;
+  link?: { href: string; label: ReactNode };
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <section className={`rounded-card border border-edge bg-paper p-5 shadow-[0_1px_1px_rgba(28,39,76,0.04)] ${className}`}>
-      {(title || actions) && (
+      {(title || actions || link) && (
         <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            {icon && <IconTile icon={icon} />}
+            {icon && <IconTile icon={icon} tone={tone} size={36} />}
             <div className="min-w-0">
               {title && <h2 className="text-base font-bold text-ink-2">{title}</h2>}
               {subtitle && <p className="text-xs text-ink-mute">{subtitle}</p>}
             </div>
           </div>
-          {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+          {(actions || link) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {actions}
+              {link && <CardLink href={link.href}>{link.label}</CardLink>}
+            </div>
+          )}
         </header>
       )}
       {children}
@@ -70,12 +94,20 @@ export function Badge({ tone = "neutral", children }: { tone?: keyof typeof tone
   return <span className={`inline-flex h-6 items-center rounded-full border px-2 text-xs font-medium whitespace-nowrap ${tones[tone]}`}>{children}</span>;
 }
 
-export function PageTitle({ children, subtitle, actions }: { children: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
+/** Page header: the section's icon (same as in the sidebar), title, one-line explanation, page actions. */
+export function PageTitle({ children, subtitle, actions, icon }: { children: ReactNode; subtitle?: ReactNode; actions?: ReactNode; icon?: IconSvgElement }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div className="min-w-0">
-        <h1 className="text-[28px] leading-[1.2] font-medium tracking-[-0.02em] text-ink sm:text-4xl sm:leading-[46px]">{children}</h1>
-        {subtitle && <p className="mt-1 text-sm text-ink-mute">{subtitle}</p>}
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="flex min-w-0 items-center gap-4">
+        {icon && (
+          <span className="hidden sm:block">
+            <IconTile icon={icon} tone="navy" size={52} />
+          </span>
+        )}
+        <div className="min-w-0">
+          <h1 className="text-[28px] leading-[1.2] font-medium tracking-[-0.02em] text-ink sm:text-4xl sm:leading-[46px]">{children}</h1>
+          {subtitle && <p className="mt-0.5 text-sm text-ink-mute">{subtitle}</p>}
+        </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -121,10 +153,12 @@ const tileTones = {
   ok: "bg-ok-tint text-ok-strong",
   warn: "bg-warn-tint text-warn",
   neutral: "bg-cream-deep text-ink-soft",
+  navy: "bg-navy text-white",
 };
+export type TileTone = keyof typeof tileTones;
 
 /** 40 px rounded square with an icon — marks what a block or a row is about. */
-export function IconTile({ icon, tone = "red", size = 40 }: { icon: IconSvgElement; tone?: keyof typeof tileTones; size?: number }) {
+export function IconTile({ icon, tone = "red", size = 40 }: { icon: IconSvgElement; tone?: TileTone; size?: number }) {
   return (
     <span className={`flex shrink-0 items-center justify-center rounded-xl ${tileTones[tone]}`} style={{ width: size, height: size }}>
       <HugeiconsIcon icon={icon} size={Math.round(size * 0.5)} />
@@ -170,6 +204,69 @@ export function FormSection({ n, title, hint, children }: { n?: number | string;
       {hint && <p className="-mt-1 text-xs text-ink-mute">{hint}</p>}
       {children}
     </fieldset>
+  );
+}
+
+/** Inside a card when there is nothing to show — a calm line with an icon, not a bare "Нічого". */
+export function Empty({ icon = CheckmarkCircle02Icon, children }: { icon?: IconSvgElement; children: ReactNode }) {
+  return (
+    <p className="flex items-center gap-2.5 rounded-xl bg-cream px-3.5 py-3 text-sm text-ink-mute">
+      <HugeiconsIcon icon={icon} size={18} className="shrink-0" />
+      {children}
+    </p>
+  );
+}
+
+/** A list of rows inside a card, separated by thin lines. */
+export function List({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <ul className={`-my-2 divide-y divide-line ${className}`}>{children}</ul>;
+}
+
+/** One row: leading element (avatar, icon tile, date), title + subtitle, trailing element (badge, number, date). */
+export function ListRow({ href, leading, title, subtitle, trailing }: { href?: string; leading?: ReactNode; title: ReactNode; subtitle?: ReactNode; trailing?: ReactNode }) {
+  const body = (
+    <span className="flex items-center gap-3 py-2.5">
+      {leading}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-ink-2">{title}</span>
+        {subtitle && <span className="block truncate text-xs text-ink-mute">{subtitle}</span>}
+      </span>
+      {trailing && <span className="shrink-0 text-right">{trailing}</span>}
+    </span>
+  );
+  return (
+    <li>
+      {href ? (
+        <Link href={href} className="-mx-2 block rounded-xl px-2 transition hover:bg-cream">
+          {body}
+        </Link>
+      ) : (
+        body
+      )}
+    </li>
+  );
+}
+
+/** Calendar-leaf date: day number over a short month (dates in lists of events, shifts, deadlines). */
+export function DateLeaf({ iso, locale, tone = "neutral" }: { iso: string; locale: string; tone?: "neutral" | "red" }) {
+  const month = new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`));
+  return (
+    <span className={`flex size-10 shrink-0 flex-col items-center justify-center rounded-xl border leading-none ${tone === "red" ? "border-red/20 bg-red-tint text-red" : "border-line bg-paper text-ink-2"}`}>
+      <span className="text-sm font-bold">{Number(iso.slice(8, 10))}</span>
+      <span className="mt-0.5 text-[10px] font-medium text-ink-mute uppercase">{month.replace(".", "")}</span>
+    </span>
+  );
+}
+
+/** Heading of a group of cards (dashboard "Моє", "Команда"…). */
+export function SectionTitle({ icon, children, hint }: { icon?: IconSvgElement; children: ReactNode; hint?: ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      {icon && <HugeiconsIcon icon={icon} size={18} className="text-ink-soft" />}
+      <h2 className="text-sm font-bold tracking-wide text-ink-2 uppercase">{children}</h2>
+      {hint && <span className="text-xs text-ink-mute">· {hint}</span>}
+      <span className="ml-2 h-px flex-1 bg-line" aria-hidden />
+    </div>
   );
 }
 

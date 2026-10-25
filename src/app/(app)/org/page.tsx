@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { getTranslations } from "next-intl/server";
 import { CompanyForm, DepartmentEditor, DepartmentForm, LocationForm } from "@/components/org-admin";
 import { ModalButton } from "@/components/overlay";
+import { sectionIcons } from "@/components/icons";
 import { Badge, Card, EmptyState, IconTile, PageTitle } from "@/components/ui";
 import { getActor } from "@/server/auth/session";
 import { scopeOf } from "@/server/authz/policy";
@@ -62,7 +63,7 @@ export default async function OrgPage() {
 
   return (
     <>
-      <PageTitle
+      <PageTitle icon={sectionIcons.org}
         subtitle={t("org.subtitle")}
         actions={
           canManage && (

@@ -3,7 +3,9 @@ import { getLocale, getTranslations } from "next-intl/server";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { devLoginEnabled, signIn } from "@/auth";
-import { Badge, Button } from "@/components/ui";
+import { Alert02Icon, InformationCircleIcon, LockPasswordIcon, Mail01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Avatar, Badge, Button } from "@/components/ui";
 import { localized } from "@/lib/format";
 import { listDevLoginUsers } from "@/server/auth/dev-users";
 import { getActorOrNull } from "@/server/auth/session";
@@ -56,7 +58,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </p>
 
           {errorKey && (
-            <div role="alert" className="mt-6 rounded-xl border border-red/30 bg-red-tint px-3 py-2 text-sm text-red-strong">
+            <div role="alert" className="mt-6 flex items-start gap-2.5 rounded-2xl border border-red/30 bg-red-tint px-4 py-3 text-sm text-red-strong">
+              <HugeiconsIcon icon={Alert02Icon} size={20} className="mt-px shrink-0" />
               {t(errorKey as "errors.default")}
             </div>
           )}
@@ -64,16 +67,25 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <form action={passwordLogin} className="mt-8 space-y-4">
             <label className="block">
               <span className="label">{t("email")}</span>
-              <input className="field h-10" name="email" type="email" autoComplete="username" required autoFocus />
+              <span className="relative block">
+                <HugeiconsIcon icon={Mail01Icon} size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ink-mute" />
+                <input className="field h-12 pl-11!" name="email" type="email" autoComplete="username" placeholder="name@freitty.com" required autoFocus />
+              </span>
             </label>
             <label className="block">
               <span className="label">{t("password")}</span>
-              <input className="field h-10" name="password" type="password" autoComplete="current-password" required />
+              <span className="relative block">
+                <HugeiconsIcon icon={LockPasswordIcon} size={18} className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ink-mute" />
+                <input className="field h-12 pl-11!" name="password" type="password" autoComplete="current-password" required />
+              </span>
             </label>
             <Button type="submit" className="h-12 w-full">
               {t("signIn")}
             </Button>
-            <p className="text-center text-xs text-ink-mute">{t("forgot")}</p>
+            <p className="flex items-start gap-2 rounded-2xl bg-cream px-4 py-3 text-xs text-ink-soft">
+              <HugeiconsIcon icon={InformationCircleIcon} size={16} className="mt-px shrink-0 text-ink-mute" />
+              {t("forgot")}
+            </p>
           </form>
 
           {devLoginEnabled && (
@@ -89,10 +101,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                         await signIn("dev", { email: u.email, redirectTo: "/" });
                       }}
                     >
-                      <button type="submit" className="flex w-full items-center justify-between gap-3 py-2 text-left text-sm hover:text-red">
-                        <span>
-                          <span className="font-medium">{u.name}</span>
-                          {u.position && <span className="block text-xs text-ink-mute">{u.position}</span>}
+                      <button type="submit" className="flex w-full items-center gap-3 py-2 text-left text-sm hover:text-red">
+                        <Avatar name={u.name} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{u.name}</span>
+                          {u.position && <span className="block truncate text-xs text-ink-mute">{u.position}</span>}
                         </span>
                         <Badge tone={u.role.code === "superadmin" ? "ink" : "neutral"}>{localized(locale, u.role.nameUk, u.role.nameEn)}</Badge>
                       </button>

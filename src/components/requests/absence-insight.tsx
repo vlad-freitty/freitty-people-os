@@ -1,9 +1,12 @@
 "use client";
 
+import { Alert02Icon, Calendar03Icon, Clock01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/format";
 import { api } from "../api";
+import { IconTile } from "../ui";
 
 export type AbsenceInsightDto = {
   typeId: string;
@@ -22,33 +25,51 @@ export function AbsenceInsightView({ insight, showWarnings = true }: { insight: 
   const t = useTranslations("absenceInsight");
   const locale = useLocale();
   const date = (iso: string) => formatDate(iso, locale) ?? iso;
+  const t2 = useTranslations("requests2");
   return (
-    <div className="space-y-2 text-sm">
-      <p className="font-medium text-ink-2">
-        {insight.last
-          ? t("last", { n: insight.last.daysSince, from: date(insight.last.from), to: date(insight.last.to) })
-          : t("lastNone")}
+    <div className="space-y-3 text-sm">
+      <div className="grid grid-cols-2 gap-2">
+        <Tile label={t2("insightSince")} value={insight.last ? t2("daysUnit", { n: insight.last.daysSince }) : t2("none")} />
+        <Tile label={t2("insightDays")} value={insight.days != null ? t2("daysUnit", { n: insight.days }) : t2("none")} />
+        {insight.balance != null && (
+          <Tile label={t2("insightBalance")} value={t2("daysUnit", { n: insight.balance })} tone={insight.balance < 0 ? "red" : "neutral"} />
+        )}
+      </div>
+      <p className="flex items-start gap-2 text-ink-soft">
+        <HugeiconsIcon icon={Clock01Icon} size={16} className="mt-0.5 shrink-0 text-ink-mute" />
+        <span>
+          {insight.last
+            ? t("last", { n: insight.last.daysSince, from: date(insight.last.from), to: date(insight.last.to) })
+            : t("lastNone")}
+        </span>
       </p>
-      {insight.days != null && (
-        <p className="text-ink-soft">
-          {t("days", { n: insight.days })}
-          {insight.balance != null && <> · {t("balance", { n: insight.balance })}</>}
-        </p>
-      )}
       {showWarnings && insight.warnings.length > 0 && (
-        <ul className="space-y-1">
+        <ul className="space-y-1.5">
           {insight.warnings.map((w) => (
-            <li key={w.code} className="rounded-xl bg-warn-tint px-3 py-1.5 text-warn">
-              {t(`warnings.${w.code}` as "warnings.no_policy", {
-                n: Number(w.n ?? 0),
-                balance: Number(w.balance ?? 0),
-                date: typeof w.date === "string" ? date(w.date) : "",
-              })}
+            <li key={w.code} className="flex items-start gap-2 rounded-xl bg-warn-tint px-3 py-2 text-warn">
+              <HugeiconsIcon icon={Alert02Icon} size={16} className="mt-0.5 shrink-0" />
+              <span>
+                {t(`warnings.${w.code}` as "warnings.no_policy", {
+                  n: Number(w.n ?? 0),
+                  balance: Number(w.balance ?? 0),
+                  date: typeof w.date === "string" ? date(w.date) : "",
+                })}
+              </span>
             </li>
           ))}
         </ul>
       )}
       {showWarnings && insight.warnings.length > 0 && <p className="text-xs text-ink-mute">{t("hint")}</p>}
+    </div>
+  );
+}
+
+/** Small number tile inside the insight block. */
+function Tile({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "red" }) {
+  return (
+    <div className="rounded-xl bg-cream px-3 py-2.5">
+      <p className="text-xs text-ink-mute">{label}</p>
+      <p className={`mt-0.5 text-lg leading-tight font-bold ${tone === "red" ? "text-red" : "text-ink-2"}`}>{value}</p>
     </div>
   );
 }
@@ -80,8 +101,11 @@ export function AbsenceInsightPreview({ values }: { values: Record<string, unkno
   }, [key]);
   if (!insight) return null;
   return (
-    <div className="rounded-card border border-edge bg-cream p-4">
-      <p className="label">{t("title")}</p>
+    <div className="rounded-2xl border border-warn/20 bg-paper p-4">
+      <p className="mb-3 flex items-center gap-2 text-sm font-bold text-ink-2">
+        <IconTile icon={Calendar03Icon} tone="warn" size={28} />
+        {t("title")}
+      </p>
       <AbsenceInsightView insight={insight} />
     </div>
   );

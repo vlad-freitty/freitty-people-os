@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { AccountsTable, IssueAccessButton, type AccountRow } from "@/components/access-admin";
+import { sectionIcons } from "@/components/icons";
 import { Card, PageTitle, Stat } from "@/components/ui";
 import { getActor } from "@/server/auth/session";
 import { hasPermission } from "@/server/authz/policy";
@@ -15,7 +16,7 @@ export default async function AccessPage() {
   const steps = [1, 2, 3] as const;
   return (
     <>
-      <PageTitle subtitle={t("subtitle")} actions={<IssueAccessButton {...options} />}>
+      <PageTitle icon={sectionIcons.access} subtitle={t("subtitle")} actions={<IssueAccessButton {...options} />}>
         {t("title")}
       </PageTitle>
       <div className="space-y-6">

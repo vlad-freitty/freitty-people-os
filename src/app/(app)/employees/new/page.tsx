@@ -1,3 +1,4 @@
+import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { EmployeeForm, emptyEmployee } from "@/components/employee-form";
@@ -10,11 +11,13 @@ export default async function NewEmployeePage() {
   const actor = await getActor();
   const scope = scopeOf(actor, "employees.edit");
   if (!scope || scope === "self") notFound();
-  const [t, options] = await Promise.all([getTranslations("employee"), employeeFormOptions(actor)]);
+  const [t, options] = await Promise.all([getTranslations(), employeeFormOptions(actor)]);
   return (
     <>
-      <PageTitle>{t("createTitle")}</PageTitle>
-      <Card>
+      <PageTitle icon={UserAdd01Icon} subtitle={t("people2.createSubtitle")}>
+        {t("employee.createTitle")}
+      </PageTitle>
+      <Card className="max-w-4xl">
         <EmployeeForm initial={emptyEmployee} {...options} />
       </Card>
     </>

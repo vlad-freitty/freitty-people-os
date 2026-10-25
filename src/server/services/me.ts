@@ -11,6 +11,8 @@ export async function getMe(actor: Actor) {
   return {
     userId: user.id,
     email: user.email,
+    // what to call the person: card name, else the account's display name, else the email
+    name: user.employee ? `${user.employee.firstName} ${user.employee.lastName}` : (user.displayName ?? user.email),
     role: { code: user.role.code, nameUk: user.role.nameUk, nameEn: user.role.nameEn },
     isSuperadmin: actor.isSuperadmin,
     employee: user.employee

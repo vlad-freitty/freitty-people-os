@@ -1,3 +1,4 @@
+import { PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { EmployeeForm } from "@/components/employee-form";
@@ -16,12 +17,14 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ i
     throw err;
   });
   if (e.access === "basic" || !can(actor, "employees.edit", { employeeId: e.id, departmentId: e.department.id })) notFound();
-  const [t, options] = await Promise.all([getTranslations("employee"), employeeFormOptions(actor, e.department.id)]);
+  const [t, options] = await Promise.all([getTranslations(), employeeFormOptions(actor, e.department.id)]);
 
   return (
     <>
-      <PageTitle>{t("editTitle")}</PageTitle>
-      <Card>
+      <PageTitle icon={PencilEdit02Icon} subtitle={`${e.firstName} ${e.lastName} · ${e.position}`}>
+        {t("employee.editTitle")}
+      </PageTitle>
+      <Card className="max-w-4xl">
         <EmployeeForm
           employeeId={e.id}
           {...options}
